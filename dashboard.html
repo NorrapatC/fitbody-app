@@ -63,6 +63,22 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .water-bar{background:linear-gradient(90deg,var(--accent4),rgba(96,165,250,.7));background-size:200% 100%;animation:waterFlow 3s linear infinite}
 @keyframes waterFlow{0%{background-position:100% 0}100%{background-position:-100% 0}}
 
+/* WATER RING */
+.water-ring-wrap{position:relative;width:120px;height:120px;margin:0 auto 16px}
+.water-ring-svg{position:absolute;inset:0;transform:rotate(-90deg);filter:drop-shadow(0 0 14px rgba(96,165,250,.4))}
+.water-bubbles{position:absolute;inset:0;border-radius:50%;overflow:hidden;pointer-events:none;z-index:1}
+.bubble{position:absolute;border-radius:50%;background:rgba(96,165,250,.3);animation:bubbleFloat linear infinite}
+@keyframes bubbleFloat{0%{transform:translateY(0) scale(1);opacity:.55}100%{transform:translateY(-130px) scale(.3);opacity:0}}
+.water-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:2;pointer-events:none}
+
+/* LIGHT THEME OVERRIDES */
+[data-theme="light"] .topbar{background:rgba(245,242,239,.97)!important;border-bottom-color:rgba(0,0,0,.1)!important}
+[data-theme="light"] .nav-inner{background:rgba(245,242,239,.97)!important;border-top-color:rgba(0,0,0,.08)!important}
+[data-theme="light"] .diary-cal-ring circle:first-child,[data-theme="light"] .diary-mini-ring circle:first-child{stroke:rgba(0,0,0,.09)!important}
+[data-theme="light"] .water-ring-svg circle:first-child{stroke:rgba(0,0,0,.09)!important}
+[data-theme="light"] .card{box-shadow:0 1px 10px rgba(0,0,0,.09)!important}
+[data-theme="light"] #theme-switcher{background:rgba(245,242,239,.97)!important;border-color:rgba(0,0,0,.12)!important}
+
 /* NO DATA STATE */
 #no-data{padding:0 14px 80px}
 .empty-card{background:var(--surface);border:2px dashed var(--border);border-radius:20px;padding:40px 20px;text-align:center;margin-top:8px}
@@ -1899,11 +1915,40 @@ function buildDiaryHTML() {
 
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>💧 น้ำ</div>
-      <div class="prog-row" style="margin-bottom:12px"><div class="prog-header"><span class="prog-label">${Math.round(totalW)}ml / ${tW}ml</span><span class="prog-val">${pW}%</span></div><div class="prog-track"><div class="prog-fill water-bar" style="width:${pW}%;background:var(--accent4)"></div></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button onclick="addWater(150)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">☕ กาแฟ<br><span style="font-size:.8em;color:var(--muted)">+150ml</span></button>
-        <button onclick="addWater(250)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">💧 แก้ว<br><span style="font-size:.8em;color:var(--muted)">+250ml</span></button>
-        <button onclick="addWater(500)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">🍶 ขวด<br><span style="font-size:.8em;color:var(--muted)">+500ml</span></button>
+      <div class="water-ring-wrap">
+        <div class="water-bubbles">
+          <div class="bubble" style="width:9px;height:9px;left:42%;bottom:12%;animation-duration:3.4s;animation-delay:0s"></div>
+          <div class="bubble" style="width:5px;height:5px;left:58%;bottom:18%;animation-duration:2.7s;animation-delay:.7s"></div>
+          <div class="bubble" style="width:11px;height:11px;left:28%;bottom:8%;animation-duration:4.1s;animation-delay:1.3s"></div>
+          <div class="bubble" style="width:6px;height:6px;left:67%;bottom:22%;animation-duration:2.9s;animation-delay:1.9s"></div>
+          <div class="bubble" style="width:4px;height:4px;left:50%;bottom:5%;animation-duration:3.8s;animation-delay:.4s"></div>
+          <div class="bubble" style="width:7px;height:7px;left:35%;bottom:28%;animation-duration:3.2s;animation-delay:2.4s"></div>
+          <div class="bubble" style="width:5px;height:5px;left:72%;bottom:10%;animation-duration:3.6s;animation-delay:1.0s"></div>
+          <div class="bubble" style="width:8px;height:8px;left:20%;bottom:15%;animation-duration:2.5s;animation-delay:2.9s"></div>
+        </div>
+        <svg class="water-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="43" fill="none" stroke="rgba(96,165,250,.12)" stroke-width="10"/>
+          <circle cx="60" cy="60" r="43" fill="none" stroke="var(--accent4)" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="270.2"
+            data-ring-pct="${pW}" data-ring-circ="270.2"
+            style="stroke-dashoffset:270.2;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1) .4s"/>
+        </svg>
+        <div class="water-ring-center">
+          <div id="water-ml-display" data-target="${Math.round(totalW)}" style="font-family:var(--font-d);font-size:1.35em;line-height:1;color:var(--accent4)">0</div>
+          <div style="font-family:var(--font-m);font-size:.44em;color:var(--muted);margin-top:2px">/ ${tW} ml</div>
+          <div style="font-size:.48em;color:var(--accent4);margin-top:3px;font-weight:700">${pW}%</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button onclick="addWater(150)" style="flex:1;min-width:70px;padding:8px 4px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.72em;cursor:pointer;text-align:center">☕ กาแฟ<br><span style="font-size:.8em;color:var(--muted)">+150ml</span></button>
+        <button onclick="addWater(250)" style="flex:1;min-width:70px;padding:8px 4px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.72em;cursor:pointer;text-align:center">💧 แก้ว<br><span style="font-size:.8em;color:var(--muted)">+250ml</span></button>
+        <button onclick="addWater(500)" style="flex:1;min-width:70px;padding:8px 4px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.72em;cursor:pointer;text-align:center">🍶 ขวด<br><span style="font-size:.8em;color:var(--muted)">+500ml</span></button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+        <input id="water-custom-input" type="number" min="1" max="5000" placeholder="กรอก ml เอง..."
+          style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid rgba(96,165,250,.25);background:rgba(96,165,250,.06);color:var(--text);font-family:var(--font-b);font-size:.76em;outline:none;-moz-appearance:textfield"
+          onkeydown="if(event.key==='Enter')addWaterCustom()">
+        <button onclick="addWaterCustom()" style="padding:8px 14px;border-radius:10px;background:var(--accent4);border:none;color:#fff;font-family:var(--font-b);font-size:.76em;cursor:pointer;font-weight:700;flex-shrink:0">+ เพิ่ม</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">${waterBadges}</div>
     </div>
@@ -2041,8 +2086,16 @@ async function deleteFoodLog(id) {
 }
 
 async function addWater(ml) {
-  const name = ml === 150 ? 'กาแฟ/ชา' : ml === 250 ? 'น้ำเปล่า 1 แก้ว' : 'น้ำ 1 ขวด'
+  const name = ml === 150 ? 'กาแฟ/ชา' : ml === 250 ? 'น้ำเปล่า 1 แก้ว' : ml === 500 ? 'น้ำ 1 ขวด' : `น้ำ ${ml}ml`
   await addFoodLog({ meal_type: 'water', food_name: name, water_ml: ml })
+}
+
+async function addWaterCustom() {
+  const input = document.getElementById('water-custom-input')
+  const ml = parseInt(input?.value)
+  if (!ml || ml < 1 || ml > 5000) return
+  input.value = ''
+  await addWater(ml)
 }
 
 async function loadTodayFoodLogs() {
@@ -2073,6 +2126,18 @@ function animateDiaryRings() {
     const circ = parseFloat(el.dataset.ringCirc) || 270
     el.style.strokeDashoffset = circ * (1 - pct / 100)
   })
+  const wDisplay = document.getElementById('water-ml-display')
+  if (wDisplay) {
+    const target = parseInt(wDisplay.dataset.target) || 0
+    if (target === 0) { wDisplay.textContent = '0'; return }
+    const dur = 1200, t0 = performance.now()
+    const tick = now => {
+      const p = Math.min((now - t0) / dur, 1)
+      wDisplay.textContent = Math.round((1 - Math.pow(1 - p, 3)) * target)
+      if (p < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }
 }
 
 function clearAiStatus() {
@@ -2456,35 +2521,40 @@ init()
 </script>
 
 <!-- THEME SWITCHER -->
-<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(14,11,28,.96);border:1px solid rgba(168,85,247,.2);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
-  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#6b5fa0;margin-right:2px">THEME</span>
-  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
-  <button onclick="setTheme('teal')" style="width:18px;height:18px;border-radius:50%;background:#2dd4bf;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-teal" title="Teal"></button>
-  <button onclick="setTheme('ember')" style="width:18px;height:18px;border-radius:50%;background:#fb923c;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-ember" title="Ember"></button>
-  <button onclick="setTheme('rose')" style="width:18px;height:18px;border-radius:50%;background:#f43f5e;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-rose" title="Rose"></button>
+<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:5px;align-items:center;background:rgba(14,11,28,.96);border:1px solid rgba(168,85,247,.2);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
+  <span style="font-family:'DM Mono',monospace;font-size:.58em;color:#6b5fa0;margin-right:2px">THEME</span>
+  <button onclick="setTheme('light')"  style="width:17px;height:17px;border-radius:50%;background:#c4b8a8;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-light"  title="Light"></button>
+  <button onclick="setTheme('dark')"   style="width:17px;height:17px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-dark"   title="Dark"></button>
+  <button onclick="setTheme('earth')"  style="width:17px;height:17px;border-radius:50%;background:#c96442;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-earth"  title="Earth"></button>
+  <button onclick="setTheme('summer')" style="width:17px;height:17px;border-radius:50%;background:#fbbf24;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-summer" title="Summer"></button>
+  <button onclick="setTheme('winter')" style="width:17px;height:17px;border-radius:50%;background:#93c5fd;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-winter" title="Winter"></button>
+  <button onclick="setTheme('spring')" style="width:17px;height:17px;border-radius:50%;background:#34d399;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-spring" title="Spring"></button>
 </div>
 
 <script>
 const THEMES = {
-  violet: { accent:'#a855f7', hover:'#9333ea', border:'rgba(168,85,247,.13)', bg:'#07050e', surface:'#0e0b1c', s2:'#150f28', s3:'#1b1435', text:'#ede9ff', muted:'#8b7fad' },
-  teal:   { accent:'#2dd4bf', hover:'#20bfad', border:'rgba(45,212,191,.1)',   bg:'#060d0d', surface:'#091614', s2:'#0d1e1e', s3:'#122826', text:'#e8fafa', muted:'#7fa8a5' },
-  ember:  { accent:'#fb923c', hover:'#f97316', border:'rgba(251,146,60,.13)',  bg:'#0e0700', surface:'#160d00', s2:'#1e1200', s3:'#261800', text:'#fff3e8', muted:'#9e7a50' },
-  rose:   { accent:'#f43f5e', hover:'#e11d48', border:'rgba(244,63,94,.13)',   bg:'#0e0508', surface:'#160710', s2:'#1e0a18', s3:'#260e20', text:'#ffe8ef', muted:'#9e5070' },
+  light:  { accent:'#7c3aed', hover:'#6d28d9', border:'rgba(124,58,237,.15)',  bg:'#f5f2ef', surface:'#ffffff', s2:'#f0ece6', s3:'#ebe5dd', text:'#1e1a16', muted:'#706358' },
+  dark:   { accent:'#a855f7', hover:'#9333ea', border:'rgba(168,85,247,.13)',  bg:'#07050e', surface:'#0e0b1c', s2:'#150f28', s3:'#1b1435', text:'#ede9ff', muted:'#8b7fad' },
+  earth:  { accent:'#c96442', hover:'#a04e32', border:'rgba(201,100,66,.15)',  bg:'#0d0804', surface:'#160f08', s2:'#1e160d', s3:'#261e12', text:'#f5e8d5', muted:'#9e7a58' },
+  summer: { accent:'#fbbf24', hover:'#f59e0b', border:'rgba(251,191,36,.12)',  bg:'#08060a', surface:'#120e01', s2:'#1a1502', s3:'#221c03', text:'#fff8e0', muted:'#a09060' },
+  winter: { accent:'#93c5fd', hover:'#60a5fa', border:'rgba(147,197,253,.13)', bg:'#030710', surface:'#060d1e', s2:'#0a1228', s3:'#0e1832', text:'#e8f0ff', muted:'#7090c0' },
+  spring: { accent:'#34d399', hover:'#10b981', border:'rgba(52,211,153,.13)',  bg:'#04090a', surface:'#061210', s2:'#091a17', s3:'#0c231f', text:'#e8fff5', muted:'#70a898' },
 }
 function setTheme(t) {
-  const th = THEMES[t] || THEMES.violet
+  const th = THEMES[t] || THEMES.dark
   const r = document.documentElement.style
   r.setProperty('--accent', th.accent); r.setProperty('--accent-hover', th.hover)
   r.setProperty('--border', th.border); r.setProperty('--bg', th.bg)
   r.setProperty('--surface', th.surface); r.setProperty('--surface2', th.s2); r.setProperty('--surface3', th.s3)
   r.setProperty('--text', th.text); r.setProperty('--muted', th.muted)
+  document.documentElement.setAttribute('data-theme', t)
   localStorage.setItem('fitbody_theme', t)
   document.querySelectorAll('#theme-switcher button').forEach(b => b.style.borderColor = 'transparent')
   const el = document.getElementById('t-' + t)
   if (el) el.style.borderColor = 'rgba(255,255,255,.85)'
 }
 ;(function(){
-  const t = localStorage.getItem('fitbody_theme') || 'violet'
+  const t = localStorage.getItem('fitbody_theme') || 'dark'
   document.addEventListener('DOMContentLoaded', () => setTheme(t))
 })()
 </script>
