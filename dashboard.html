@@ -9,7 +9,7 @@
 <script src="js/config.js"></script>
 <!-- Reuse all styles from v3 but add user-specific overrides -->
 <style>
-:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#f5c842;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
@@ -35,7 +35,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* HERO */
 .hero{padding:clamp(20px,4vw,36px) 14px 20px;position:relative;overflow:hidden}
-.hero-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:min(600px,150%);height:280px;background:radial-gradient(ellipse,rgba(245,200,66,.1) 0%,transparent 70%);pointer-events:none}
+.hero-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:min(600px,150%);height:280px;background:radial-gradient(ellipse,rgba(45,212,191,.1) 0%,transparent 70%);pointer-events:none}
 .user-greeting{font-size:clamp(.8em,1.5vw+.5em,.9em);color:var(--muted);font-family:var(--font-m);letter-spacing:.06em;margin-bottom:4px}
 .user-name{font-family:var(--font-d);font-size:clamp(2em,6vw,3.5em);line-height:1;margin-bottom:6px}
 .user-name span{color:var(--accent)}
@@ -48,7 +48,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .empty-title{font-family:var(--font-d);font-size:1.6em;color:var(--accent);margin-bottom:8px}
 .empty-sub{font-size:.8em;color:var(--muted);line-height:1.7;margin-bottom:24px}
 .btn-start{display:inline-block;background:var(--accent);color:#080b10;padding:14px 28px;border-radius:12px;font-weight:700;font-size:.9em;text-decoration:none;transition:all .2s}
-.btn-start:hover{background:#e6bb30;transform:translateY(-1px)}
+.btn-start:hover{background:#20bfad;transform:translateY(-1px)}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 14px 16px;position:relative;z-index:1}
@@ -153,7 +153,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* BADGE/TIPS */
 .badge{display:inline-block;font-family:var(--font-m);font-size:.6em;padding:2px 8px;border-radius:6px}
-.badge-y{background:rgba(245,200,66,.12);color:var(--accent)}
+.badge-y{background:rgba(45,212,191,.12);color:var(--accent)}
 .badge-g{background:rgba(74,222,128,.12);color:var(--accent3)}
 .badge-b{background:rgba(96,165,250,.12);color:var(--accent4)}
 .badge-o{background:rgba(255,107,53,.12);color:var(--accent2)}
@@ -162,7 +162,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 .info-box{border-radius:10px;padding:10px 14px;margin-bottom:10px;border-left:3px solid;font-size:.76em;line-height:1.7}
 .info-box strong{display:block;font-family:var(--font-m);font-size:.8em;letter-spacing:.08em;margin-bottom:3px;text-transform:uppercase}
-.ib-y{background:rgba(245,200,66,.07);border-color:var(--accent);color:#c9a000}
+.ib-y{background:rgba(45,212,191,.07);border-color:var(--accent);color:#0d9488}
 .ib-g{background:rgba(74,222,128,.07);border-color:var(--accent3);color:var(--accent3)}
 .ib-r{background:rgba(248,113,113,.07);border-color:var(--red);color:var(--red)}
 .ib-b{background:rgba(96,165,250,.07);border-color:var(--accent4);color:var(--accent4)}
@@ -196,9 +196,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .modal-instructions{padding:0 20px;margin-bottom:14px}
 .modal-instructions h4{font-size:.7em;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:var(--font-m);margin-bottom:8px}
 .step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px}
-.step-num{width:20px;height:20px;border-radius:5px;background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.62em;color:var(--accent);flex-shrink:0;margin-top:1px}
+.step-num{width:20px;height:20px;border-radius:5px;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.62em;color:var(--accent);flex-shrink:0;margin-top:1px}
 .step-text{font-size:.76em;color:var(--text);line-height:1.6}
-.modal-tip{margin:0 20px 20px;background:rgba(245,200,66,.06);border:1px solid rgba(245,200,66,.15);border-radius:10px;padding:10px 14px;font-size:.72em;color:#d4a800;line-height:1.7}
+.modal-tip{margin:0 20px 20px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);border-radius:10px;padding:10px 14px;font-size:.72em;color:#0d9488;line-height:1.7}
 .modal-tip strong{display:block;font-family:var(--font-m);font-size:.82em;letter-spacing:.08em;margin-bottom:4px}
 
 ::-webkit-scrollbar{width:3px;height:3px}
@@ -306,7 +306,7 @@ const EXERCISES = {
 }
 
 // ======= MUSCLE SVG =======
-function getMC(m,p){const c={chest:p?'#60a5fa':'rgba(96,165,250,0.35)',back:p?'#4ade80':'rgba(74,222,128,0.35)',shoulder:p?'#e879f9':'rgba(232,121,249,0.35)',arm:p?'#f5c842':'rgba(245,200,66,0.35)',tricep:p?'#f5c842':'rgba(245,200,66,0.35)',core:p?'#ff6b35':'rgba(255,107,53,0.35)',leg:p?'#f87171':'rgba(248,113,113,0.35)',glute:p?'#a78bfa':'rgba(167,139,250,0.35)',calf:p?'#34d399':'rgba(52,211,153,0.35)',full:p?'#fbbf24':'rgba(251,191,36,0.35)'};return c[m]||'rgba(255,255,255,0.1)'}
+function getMC(m,p){const c={chest:p?'#60a5fa':'rgba(96,165,250,0.35)',back:p?'#4ade80':'rgba(74,222,128,0.35)',shoulder:p?'#e879f9':'rgba(232,121,249,0.35)',arm:p?'#2dd4bf':'rgba(45,212,191,0.35)',tricep:p?'#2dd4bf':'rgba(45,212,191,0.35)',core:p?'#ff6b35':'rgba(255,107,53,0.35)',leg:p?'#f87171':'rgba(248,113,113,0.35)',glute:p?'#a78bfa':'rgba(167,139,250,0.35)',calf:p?'#34d399':'rgba(52,211,153,0.35)',full:p?'#fbbf24':'rgba(251,191,36,0.35)'};return c[m]||'rgba(255,255,255,0.1)'}
 function buildSVG(prim,sec){
   const a={chest:'rgba(255,255,255,0.05)',shoulder:'rgba(255,255,255,0.05)',arm:'rgba(255,255,255,0.05)',tricep:'rgba(255,255,255,0.05)',back:'rgba(255,255,255,0.05)',core:'rgba(255,255,255,0.05)',leg:'rgba(255,255,255,0.05)',glute:'rgba(255,255,255,0.05)',calf:'rgba(255,255,255,0.05)',full:'rgba(255,255,255,0.05)'}
   prim.forEach(m=>{a[m]=getMC(m,true);if(m==='full')Object.keys(a).forEach(k=>a[k]=getMC('full',true))})

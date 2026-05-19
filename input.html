@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <style>
-:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#f5c842;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:100px}
@@ -25,7 +25,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 /* METHOD SELECTOR */
 .method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
 .method-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s}
-.method-card.active{border-color:var(--accent);background:rgba(245,200,66,.05)}
+.method-card.active{border-color:var(--accent);background:rgba(45,212,191,.05)}
 .method-card:hover:not(.active){border-color:rgba(255,255,255,.15)}
 .method-icon{font-size:2em;margin-bottom:8px}
 .method-title{font-size:.86em;font-weight:700;margin-bottom:4px}
@@ -38,7 +38,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* UPLOAD AREA */
 .upload-area{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
-.upload-area:hover,.upload-area.drag-over{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
+.upload-area:hover,.upload-area.drag-over{border-color:rgba(45,212,191,.4);background:rgba(45,212,191,.03)}
 .upload-icon{font-size:2.5em;margin-bottom:10px}
 .upload-title{font-size:.86em;font-weight:700;margin-bottom:4px}
 .upload-sub{font-size:.72em;color:var(--muted)}
@@ -61,7 +61,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .form-group.full{grid-column:1/-1}
 .form-label{display:block;font-size:.66em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
 .form-input{width:100%;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.88em;outline:none;transition:border-color .2s}
-.form-input:focus{border-color:rgba(245,200,66,.4)}
+.form-input:focus{border-color:rgba(45,212,191,.4)}
 .form-input.ai-filled{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.03)}
 .form-input.ai-filled::after{content:'AI'}
 select.form-input{cursor:pointer}
@@ -70,7 +70,7 @@ select.form-input option{background:var(--surface2);color:var(--text)}
 /* TAGS (Sports) */
 .tags-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .tag{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.76em;cursor:pointer;transition:all .2s}
-.tag.active{border-color:var(--accent);color:var(--accent);background:rgba(245,200,66,.08)}
+.tag.active{border-color:var(--accent);color:var(--accent);background:rgba(45,212,191,.08)}
 
 /* RESULT PREVIEW */
 .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
@@ -79,13 +79,13 @@ select.form-input option{background:var(--surface2);color:var(--text)}
 .result-label{font-size:.58em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
 .result-val{font-family:var(--font-d);font-size:1.5em;line-height:1}
 .result-unit{font-size:.6em;color:var(--muted)}
-.result-card.highlight{border-color:rgba(245,200,66,.2)}
+.result-card.highlight{border-color:rgba(45,212,191,.2)}
 .result-card.highlight .result-val{color:var(--accent)}
 
 /* BUTTON */
 .btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s}
 .btn-primary{background:var(--accent);color:#080b10}
-.btn-primary:hover{background:#e6bb30;transform:translateY(-1px)}
+.btn-primary:hover{background:#20bfad;transform:translateY(-1px)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:10px}
 
@@ -227,8 +227,8 @@ select.form-input option{background:var(--surface2);color:var(--text)}
 
       <!-- AUTO-CALC ROW: BMI + Fat kg computed live -->
       <div id="auto-calc-row" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <span id="auto-bmi" style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#f5c842">⚡ BMI: —</span>
-        <span id="auto-fatkg" style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#f5c842">⚡ ไขมัน: — kg</span>
+        <span id="auto-bmi" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#2dd4bf">⚡ BMI: —</span>
+        <span id="auto-fatkg" style="background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#2dd4bf">⚡ ไขมัน: — kg</span>
       </div>
 
       <!-- COLLAPSIBLE: InBody Score + Visceral Fat -->
