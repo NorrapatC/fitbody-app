@@ -79,8 +79,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .nav-wrap{padding:0 14px;margin-bottom:14px;position:sticky;top:53px;z-index:90}
 .nav-inner{background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r);padding:5px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .nav-inner::-webkit-scrollbar{display:none}
-.nav-btn{flex-shrink:0;padding:8px 13px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:clamp(.72em,.9vw+.5em,.8em);font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
-.nav-btn.active{background:var(--accent);color:#080b10}
+.nav-btn{flex-shrink:0;padding:8px 16px;border-radius:20px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:clamp(.74em,.9vw+.5em,.84em);font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-btn.active{background:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.3)}
 
 /* PANEL */
 .panel{display:none;padding:0 14px 100px;animation:fadeUp .25s ease}
@@ -1905,37 +1905,43 @@ function renderDashboard(profile, record, allRecords) {
     <div class="prog-note">TDEE ${cr.tdee} kcal · ขาดดุล ${cr.tdee-cr.targetCal} kcal/วัน · โปรตีน ${cr.proteinG}g/วัน · ดื่มน้ำ ${cr.waterNeeded}L/วัน</div>
   `
 
-  // BUILD TABS (dynamic based on sports)
-  const tabs = [{id:'exercise',label:'🏋️ ออกกำลังกาย'},{id:'food',label:'🍽️ อาหาร'},{id:'diary',label:'📝 บันทึก'},{id:'history',label:'📊 ประวัติ'},{id:'tips',label:'💡 Tips'}]
+  // BUILD TABS — diary first (highest daily-use frequency)
+  const tabs = [
+    {id:'diary',    label:'📝 บันทึก'},
+    {id:'exercise', label:'🏋️ ซ้อม'},
+    {id:'food',     label:'🍽️ แผนอาหาร'},
+    {id:'history',  label:'📊 ประวัติ'},
+  ]
   document.getElementById('nav-inner').innerHTML = tabs.map((t,i)=>
     `<button class="nav-btn${i===0?' active':''}" onclick="switchTab('${t.id}',this)">${t.label}</button>`
   ).join('')
 
-  // PANELS
-  document.getElementById('panels-container').innerHTML = `
-    <div class="panel active" id="tab-exercise">${generateWorkoutPlan(sports, goal, cr, wtFreq)}</div>
-    <div class="panel" id="tab-food">${generateFoodPlan(cr)}</div>
-    <div class="panel" id="tab-diary">${buildDiaryHTML()}</div>
-    <div class="panel" id="tab-history">${buildHistoryHTML(allRecords)}</div>
-    <div class="panel" id="tab-tips">
-      <div class="card">
-        <div class="card-title"><span class="dot" style="background:var(--accent)"></span>เคล็ดลับสำหรับคุณ</div>
-        <div class="tip-row"><div class="tip-icon">💧</div><div><div class="tip-title">ดื่มน้ำ ${cr.waterNeeded} ลิตร/วัน</div><div class="tip-body">คำนวณจากน้ำหนัก ${weight} kg × 35ml/kg</div></div></div>
-        <div class="tip-row"><div class="tip-icon">🥩</div><div><div class="tip-title">โปรตีน ${cr.proteinG}g/วัน</div><div class="tip-body">1.8g × น้ำหนัก ${weight} kg เพื่อรักษากล้ามเนื้อขณะลดไขมัน</div></div></div>
-        <div class="tip-row"><div class="tip-icon">😴</div><div><div class="tip-title">นอนหลับ 7–8 ชั่วโมง</div><div class="tip-body">Growth Hormone หลั่งช่วงหลับลึก — สำคัญกว่าการออกกำลังกาย</div></div></div>
-        <div class="tip-row"><div class="tip-icon">📏</div><div><div class="tip-title">ชั่งน้ำหนักทุกจันทร์เช้า</div><div class="tip-body">ตื่นนอน ก่อนกิน ก่อนดื่มน้ำ ชุดเดิมทุกครั้ง</div></div></div>
-        <div class="tip-row"><div class="tip-icon">🎯</div><div><div class="tip-title">InBody ซ้ำทุก 4–6 สัปดาห์</div><div class="tip-body">ดู Muscle Mass + Fat Mass ไม่ใช่แค่น้ำหนัก</div></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title"><span class="dot" style="background:var(--accent)"></span>เป้าหมาย ${cr.weeksNeeded} สัปดาห์</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">น้ำหนักเป้าหมาย</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent3)">${cr.targetWeight} kg</div></div>
-          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">ลดไขมัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--red)">−${cr.fatToLose} kg</div></div>
-          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">แคลอรี่/วัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent4)">${cr.targetCal}</div></div>
-          <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">โปรตีน/วัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent3)">${cr.proteinG}g</div></div>
-        </div>
-      </div>
+  // Tips card — merged into history (no daily value, accessed alongside progress review)
+  const tipsHTML = `
+    <div class="card" style="margin-top:4px">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>💡 เคล็ดลับสำหรับคุณ</div>
+      <div class="tip-row"><div class="tip-icon">💧</div><div><div class="tip-title">ดื่มน้ำ ${cr.waterNeeded} ลิตร/วัน</div><div class="tip-body">คำนวณจากน้ำหนัก ${weight} kg × 35ml/kg</div></div></div>
+      <div class="tip-row"><div class="tip-icon">🥩</div><div><div class="tip-title">โปรตีน ${cr.proteinG}g/วัน</div><div class="tip-body">1.8g × น้ำหนัก ${weight} kg เพื่อรักษากล้ามเนื้อขณะลดไขมัน</div></div></div>
+      <div class="tip-row"><div class="tip-icon">😴</div><div><div class="tip-title">นอนหลับ 7–8 ชั่วโมง</div><div class="tip-body">Growth Hormone หลั่งช่วงหลับลึก — สำคัญกว่าการออกกำลังกาย</div></div></div>
+      <div class="tip-row"><div class="tip-icon">📏</div><div><div class="tip-title">ชั่งน้ำหนักทุกจันทร์เช้า</div><div class="tip-body">ตื่นนอน ก่อนกิน ก่อนดื่มน้ำ ชุดเดิมทุกครั้ง</div></div></div>
+      <div class="tip-row"><div class="tip-icon">🎯</div><div><div class="tip-title">InBody ซ้ำทุก 4–6 สัปดาห์</div><div class="tip-body">ดู Muscle Mass + Fat Mass ไม่ใช่แค่น้ำหนัก</div></div></div>
     </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🎯 เป้าหมาย ${cr.weeksNeeded} สัปดาห์</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">น้ำหนักเป้าหมาย</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent3)">${cr.targetWeight} kg</div></div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">ลดไขมัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--red)">−${cr.fatToLose} kg</div></div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">แคลอรี่/วัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent4)">${cr.targetCal}</div></div>
+        <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center"><div style="font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-bottom:4px">โปรตีน/วัน</div><div style="font-family:var(--font-d);font-size:1.5em;color:var(--accent3)">${cr.proteinG}g</div></div>
+      </div>
+    </div>`
+
+  // PANELS — diary is first (active), tips merged into history panel
+  document.getElementById('panels-container').innerHTML = `
+    <div class="panel active" id="tab-diary">${buildDiaryHTML()}</div>
+    <div class="panel" id="tab-exercise">${generateWorkoutPlan(sports, goal, cr, wtFreq)}</div>
+    <div class="panel" id="tab-food">${generateFoodPlan(cr)}</div>
+    <div class="panel" id="tab-history">${buildHistoryHTML(allRecords)}${tipsHTML}</div>
     <div class="footer">FITBODY · ${currentUser?.email||''}</div>
   `
 
