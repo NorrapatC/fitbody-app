@@ -272,6 +272,44 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .prog-status-text{font-size:.66em;color:var(--muted);font-family:var(--font-m);display:flex;align-items:center;gap:6px}
 .prog-spinner{width:10px;height:10px;border:2px solid rgba(45,212,191,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============================
+   RESPONSIVE — ALL PLATFORMS
+   ============================ */
+
+/* Tablet + Desktop: center content, cap width */
+@media(min-width:680px){
+  #hero,#main-dashboard,#no-data{max-width:680px;margin-left:auto;margin-right:auto;width:100%}
+  .topbar{padding-left:clamp(14px,4vw,40px);padding-right:clamp(14px,4vw,40px)}
+  .hero{padding-left:clamp(14px,4vw,32px);padding-right:clamp(14px,4vw,32px)}
+  #theme-switcher{right:clamp(16px,4vw,40px)}
+  /* Modal/sheet width already capped at 600px — good */
+}
+@media(min-width:1024px){
+  #hero,#main-dashboard,#no-data{max-width:760px}
+}
+
+/* Very small phones (≤320px) */
+@media(max-width:320px){
+  .topbar h1{font-size:1.1em}
+  .topbar-btn{padding:5px 7px;font-size:.66em}
+  .user-name{font-size:1.8em}
+  .nav-btn{padding:7px 10px;font-size:.7em}
+  .sc-num{font-size:1.4em}
+  .sc{padding:10px 6px}
+  .history-vals{gap:6px}
+  .history-val-num{font-size:.95em}
+  .diary-rings-wrap{flex-direction:column;align-items:flex-start}
+  .ai-food-btn{font-size:.68em;padding:7px 6px}
+}
+
+/* Safe area bottom for all modals */
+.modal,.sports-sheet,.profile-sheet{padding-bottom:max(env(safe-area-inset-bottom,16px),16px)}
+
+/* Touch target boost for small interactive elements */
+.nav-btn{min-height:38px}
+.topbar-btn{min-height:36px}
+.ai-food-btn{min-height:40px}
 </style>
 </head>
 <body>
@@ -1160,64 +1198,75 @@ function handleAvatarUpload(input) {
 async function saveProfile() {
   if (!currentUser) return
   const btn = document.getElementById('save-profile-btn')
+  const statusEl = document.getElementById('avatar-upload-status')
   const orig = btn.textContent
   btn.textContent = 'กำลังบันทึก...'
   btn.disabled = true
 
   const name = document.getElementById('profile-name-input').value.trim().slice(0, 60)
   let avatarUrl = userProfile?.avatar_url || null
+  let avatarFailed = false
 
-  if (window._pendingAvatarFile) {
-    const file = window._pendingAvatarFile
-    const ext = file.type === 'image/png' ? 'png' : 'jpg'
-    const path = `${currentUser.id}/avatar.${ext}`
-    const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
-    if (upErr) {
-      btn.textContent = orig
-      btn.disabled = false
-      document.getElementById('avatar-upload-status').textContent = '⚠️ อัปโหลดรูปไม่สำเร็จ: ' + upErr.message
+  try {
+    if (window._pendingAvatarFile) {
+      const file = window._pendingAvatarFile
+      const ext = file.type === 'image/png' ? 'png' : 'jpg'
+      const path = `${currentUser.id}/avatar.${ext}`
+      statusEl.textContent = '⏳ กำลังอัปโหลดรูป...'
+      const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) {
+        console.error('Avatar upload error:', upErr)
+        statusEl.textContent = '⚠️ อัปโหลดรูปไม่สำเร็จ: ' + upErr.message
+        avatarFailed = true
+      } else {
+        const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path)
+        avatarUrl = publicUrl + '?t=' + Date.now()
+        window._pendingAvatarFile = null
+      }
+    }
+
+    const { error: dbErr } = await sb.from('profiles').upsert({ id: currentUser.id, name: name || null, avatar_url: avatarUrl }, { onConflict: 'id' })
+    if (dbErr) {
+      statusEl.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + dbErr.message
       return
     }
-    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path)
-    avatarUrl = publicUrl + '?t=' + Date.now()
-    window._pendingAvatarFile = null
-  }
 
-  const { error: dbErr } = await sb.from('profiles').upsert({ id: currentUser.id, name: name || null, avatar_url: avatarUrl }, { onConflict: 'id' })
-  if (dbErr) {
+    await sb.auth.updateUser({ data: { full_name: name, avatar_url: avatarUrl } })
+    userProfile = { ...userProfile, name, avatar_url: avatarUrl }
+
+    // Update topbar avatar
+    const avatarEl = document.getElementById('user-avatar')
+    if (avatarUrl) {
+      const img = document.createElement('img')
+      img.src = avatarUrl
+      img.alt = 'avatar'
+      avatarEl.textContent = ''
+      avatarEl.appendChild(img)
+    } else {
+      avatarEl.textContent = (name || currentUser.email || '?')[0].toUpperCase()
+    }
+
+    // Update greeting name
+    if (name) {
+      const nameEl = document.getElementById('user-name')
+      const nameSpan = document.createElement('span')
+      nameSpan.textContent = name.split(' ')[0].toUpperCase()
+      nameEl.textContent = ''
+      nameEl.appendChild(nameSpan)
+    }
+
+    if (!avatarFailed) {
+      closeProfileEditor()
+    } else {
+      statusEl.textContent += ' — ชื่อบันทึกสำเร็จแล้ว'
+    }
+  } catch (err) {
+    console.error('saveProfile error:', err)
+    statusEl.textContent = '⚠️ เกิดข้อผิดพลาด: ' + (err?.message || 'Unknown error')
+  } finally {
     btn.textContent = orig
     btn.disabled = false
-    document.getElementById('avatar-upload-status').textContent = '⚠️ บันทึกไม่สำเร็จ: ' + dbErr.message
-    return
   }
-
-  await sb.auth.updateUser({ data: { full_name: name, avatar_url: avatarUrl } })
-  userProfile = { ...userProfile, name, avatar_url: avatarUrl }
-
-  // Update topbar avatar
-  const avatarEl = document.getElementById('user-avatar')
-  if (avatarUrl) {
-    const img = document.createElement('img')
-    img.src = avatarUrl
-    img.alt = 'avatar'
-    avatarEl.textContent = ''
-    avatarEl.appendChild(img)
-  } else {
-    avatarEl.textContent = (name || currentUser.email || '?')[0].toUpperCase()
-  }
-
-  // Update greeting name
-  if (name) {
-    const nameEl = document.getElementById('user-name')
-    const nameSpan = document.createElement('span')
-    nameSpan.textContent = name.split(' ')[0].toUpperCase()
-    nameEl.textContent = ''
-    nameEl.appendChild(nameSpan)
-  }
-
-  btn.textContent = orig
-  btn.disabled = false
-  closeProfileEditor()
 }
 
 // ======= WORKOUT FREQUENCY =======
