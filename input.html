@@ -8,7 +8,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <style>
-:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent-hover:#20bfad;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+[data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
+[data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:100px}
@@ -38,7 +40,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* UPLOAD AREA */
 .upload-area{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
-.upload-area:hover,.upload-area.drag-over{border-color:rgba(45,212,191,.4);background:rgba(45,212,191,.03)}
+.upload-area:hover,.upload-area.drag-over{border-color:var(--accent);opacity:.8;background:rgba(45,212,191,.03)}
 .upload-icon{font-size:2.5em;margin-bottom:10px}
 .upload-title{font-size:.86em;font-weight:700;margin-bottom:4px}
 .upload-sub{font-size:.72em;color:var(--muted)}
@@ -85,7 +87,7 @@ select.form-input option{background:var(--surface2);color:var(--text)}
 /* BUTTON */
 .btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s}
 .btn-primary{background:var(--accent);color:#080b10}
-.btn-primary:hover{background:#20bfad;transform:translateY(-1px)}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:10px}
 
@@ -735,6 +737,29 @@ uploadArea.addEventListener('drop', e => {
   }
   reader.readAsDataURL(file)
 })
+</script>
+
+<!-- THEME SWITCHER -->
+<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(15,19,24,.95);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
+  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#5a6478;margin-right:2px">THEME</span>
+  <button onclick="setTheme('teal')" style="width:18px;height:18px;border-radius:50%;background:#2dd4bf;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-teal" title="Teal"></button>
+  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a78bfa;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
+  <button onclick="setTheme('ember')" style="width:18px;height:18px;border-radius:50%;background:#fb923c;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-ember" title="Ember"></button>
+</div>
+
+<script>
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t)
+  localStorage.setItem('fitbody_theme',t)
+  document.querySelectorAll('#theme-switcher button').forEach(b=>b.style.borderColor='transparent')
+  const el=document.getElementById('t-'+t)
+  if(el)el.style.borderColor='rgba(255,255,255,0.8)'
+}
+;(function(){
+  const t=localStorage.getItem('fitbody_theme')||'teal'
+  document.documentElement.setAttribute('data-theme',t)
+  document.addEventListener('DOMContentLoaded',()=>setTheme(t))
+})()
 </script>
 </body>
 </html>

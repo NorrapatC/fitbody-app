@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FitBody — Setup Wizard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b10;
+  --surface:#0f1318;
+  --surface2:#161b24;
+  --surface3:#1c2330;
+  --border:rgba(255,255,255,0.08);
+  --accent:#2dd4bf;
+  --accent-hover:#20bfad;
+  --accent3:#4ade80;
+  --accent4:#60a5fa;
+  --red:#f87171;
+  --text:#eef2f7;
+  --muted:#5a6478;
+  --font-d:'Bebas Neue',sans-serif;
+  --font-b:'Noto Sans Thai',sans-serif;
+  --font-m:'DM Mono',monospace;
+  --r:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;overflow-x:hidden}
+
+/* NOISE */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+/* GLOW */
+.glow{position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(45,212,191,0.1) 0%,transparent 70%);pointer-events:none;z-index:0}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.topbar-back{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text);font-size:.78em;cursor:pointer;text-decoration:none;font-family:var(--font-b);transition:all .2s}
+.topbar-back:hover{border-color:rgba(255,255,255,.2)}
+.topbar-logo{font-family:var(--font-d);font-size:1.3em;letter-spacing:.05em;color:var(--accent)}
+
+/* CONTENT */
+.content{max-width:620px;margin:0 auto;padding:28px 16px;position:relative;z-index:1}
+
+/* HEADER */
+.page-header{margin-bottom:32px;text-align:center}
+.page-header h1{font-family:var(--font-d);font-size:clamp(2.2em,6vw,3em);letter-spacing:.05em;margin-bottom:8px}
+.page-header p{font-family:var(--font-m);font-size:.76em;color:var(--muted);letter-spacing:.06em}
+
+/* STEP INDICATOR */
+.wizard-steps{display:flex;gap:0;margin-bottom:32px;background:var(--surface2);border-radius:var(--r);padding:6px;border:1px solid var(--border)}
+.wizard-step{flex:1;text-align:center;padding:10px 8px;border-radius:10px;font-family:var(--font-m);font-size:.65em;color:var(--muted);letter-spacing:.06em;transition:all .3s;position:relative}
+.wizard-step.active{background:var(--accent);color:#080b10;font-weight:700}
+.wizard-step.done{color:var(--accent3)}
+.wizard-step.done::after{content:'✓';margin-left:4px}
+
+/* SECTION CARD */
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px}
+.setup-card-title{font-family:var(--font-d);font-size:1.1em;letter-spacing:.06em;color:var(--accent);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.setup-card-num{width:24px;height:24px;border-radius:6px;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.65em;color:var(--accent);flex-shrink:0}
+.setup-card-sub{font-size:.76em;color:var(--muted);margin-bottom:20px;font-family:var(--font-m)}
+
+/* FORM */
+.form-group{margin-bottom:16px;position:relative}
+.form-label{display:block;font-size:.66em;color:var(--muted);font-family:var(--font-m);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.form-input{width:100%;padding:13px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-m);font-size:.84em;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:rgba(45,212,191,.45)}
+.form-input::placeholder{color:var(--muted)}
+.form-input.valid{border-color:rgba(74,222,128,.35)}
+
+/* PASSWORD TOGGLE */
+.pw-toggle{position:absolute;right:12px;bottom:11px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.88em;padding:3px 6px;transition:color .2s}
+.pw-toggle:hover{color:var(--text)}
+
+/* TEXTAREA / CODE BLOCK */
+.code-block{width:100%;min-height:180px;padding:16px;background:var(--surface2);border:1px solid rgba(45,212,191,.25);border-radius:12px;color:var(--accent3);font-family:var(--font-m);font-size:.76em;line-height:1.7;resize:vertical;outline:none;transition:border-color .2s;letter-spacing:.01em}
+.code-block:focus{border-color:rgba(45,212,191,.45)}
+.code-block::placeholder{color:var(--muted)}
+
+/* BUTTONS */
+.btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-primary{background:var(--accent);color:#080b10;margin-bottom:10px}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 8px 24px rgba(45,212,191,0.2)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:10px}
+.btn-secondary:hover{border-color:rgba(255,255,255,.2)}
+.btn-copy{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:10px 18px;border-radius:10px;font-family:var(--font-m);font-size:.76em;cursor:pointer;width:auto;transition:all .2s;display:inline-flex;align-items:center;gap:7px}
+.btn-copy:hover{border-color:rgba(45,212,191,.35);color:var(--accent)}
+.btn-copy.copied{border-color:rgba(74,222,128,.4);color:var(--accent3)}
+
+/* CHECKLIST */
+.checklist{margin-top:4px}
+.check-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;user-select:none}
+.check-item:last-child{border-bottom:none}
+.check-item:hover .check-box{border-color:rgba(45,212,191,.4)}
+.check-box{width:20px;height:20px;border-radius:5px;border:1.5px solid rgba(255,255,255,.15);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px}
+.check-item.checked .check-box{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)}
+.check-tick{display:none;font-size:.75em;color:var(--accent3)}
+.check-item.checked .check-tick{display:block}
+.check-label{font-size:.82em;color:var(--text);line-height:1.5}
+.check-item.checked .check-label{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.2)}
+.check-note{font-size:.68em;color:var(--muted);margin-top:3px;font-family:var(--font-m)}
+
+/* PROGRESS BAR */
+.progress-bar-wrap{height:3px;background:rgba(255,255,255,.06);border-radius:3px;margin-bottom:28px;overflow:hidden}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+
+/* VALIDATION ERROR */
+.field-error{font-family:var(--font-m);font-size:.66em;color:var(--red);margin-top:5px;display:none}
+.form-input.error-state{border-color:rgba(248,113,113,.35)}
+.form-input.error-state + .field-error{display:block}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:var(--accent3);padding:10px 22px;border-radius:30px;font-family:var(--font-m);font-size:.78em;z-index:9998;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* GENERATED SECTION (hidden until generated) */
+#step2-section{display:none}
+#step3-section{display:none}
+
+/* INFO BOX */
+.info-box{background:rgba(45,212,191,.05);border:1px solid rgba(45,212,191,.15);border-left:3px solid var(--accent);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:.8em;color:#0d9488;line-height:1.7}
+.info-box strong{display:block;font-family:var(--font-m);font-size:.78em;letter-spacing:.08em;margin-bottom:4px;color:var(--accent)}
+
+/* LINK */
+a.text-link{color:var(--accent);text-decoration:none;font-family:var(--font-m);font-size:.78em}
+a.text-link:hover{text-decoration:underline}
+
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
+
+/* THEME */
+[data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
+[data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="landing.html" class="topbar-back">← กลับ</a>
+  <div class="topbar-logo">FITBODY</div>
+</div>
+
+<div class="content">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>ตั้งค่า <span style="color:var(--accent)">FITBODY</span></h1>
+    <p>กรอกข้อมูล Supabase แล้วกด Generate — ใช้เวลาไม่ถึง 2 นาที</p>
+  </div>
+
+  <!-- WIZARD STEP INDICATOR -->
+  <div class="wizard-steps">
+    <div class="wizard-step active" id="ws-1">STEP 1 · CREDENTIALS</div>
+    <div class="wizard-step" id="ws-2">STEP 2 · CONFIG</div>
+    <div class="wizard-step" id="ws-3">STEP 3 · CHECKLIST</div>
+  </div>
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar" style="width:33%"></div>
+  </div>
+
+  <!-- STEP 1: CREDENTIALS -->
+  <div class="setup-card" id="step1-section">
+    <div class="setup-card-title">
+      <div class="setup-card-num">1</div>
+      SUPABASE CREDENTIALS
+    </div>
+    <div class="setup-card-sub">หาได้ที่ Supabase Dashboard → Project Settings → API</div>
+
+    <div class="form-group">
+      <label class="form-label" for="inp-url">Supabase Project URL</label>
+      <input type="url" class="form-input" id="inp-url" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false" oninput="onInputChange()">
+      <div class="field-error" id="err-url">กรุณากรอก URL ในรูปแบบ https://xxxx.supabase.co</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="inp-key">Supabase Anon Key</label>
+      <input type="password" class="form-input" id="inp-key" placeholder="eyJhbGciOiJIUzI1NiIs..." autocomplete="off" spellcheck="false" style="padding-right:48px" oninput="onInputChange()">
+      <button class="pw-toggle" type="button" onclick="toggleKeyVisibility()" id="key-toggle" title="แสดง/ซ่อน Key">👁</button>
+      <div class="field-error" id="err-key">กรุณากรอก Anon Key</div>
+    </div>
+
+    <div class="info-box">
+      <strong>ข้อมูลอยู่แค่ในเครื่องของคุณ</strong>
+      Key จะถูกบันทึกเป็น config.js ในโปรเจ็กต์ ไม่ได้ส่งไปที่เซิร์ฟเวอร์ใดๆ
+    </div>
+
+    <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" class="text-link">→ เปิด Supabase Dashboard</a>
+
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="generateConfig()">
+        ⚡ Generate config.js
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: GENERATED CONFIG -->
+  <div class="setup-card" id="step2-section">
+    <div class="setup-card-title">
+      <div class="setup-card-num">2</div>
+      GENERATED CONFIG.JS
+    </div>
+    <div class="setup-card-sub">คัดลอกโค้ดนี้แล้วบันทึกเป็นไฟล์ <span style="color:var(--accent);font-family:var(--font-m)">js/config.js</span></div>
+
+    <textarea class="code-block" id="output-config" readonly spellcheck="false" placeholder="กด Generate ด้านบนก่อน..."></textarea>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <button class="btn-copy" id="copy-btn" onclick="copyConfig()">
+        📋 Copy config.js
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: NEXT STEPS CHECKLIST -->
+  <div class="setup-card" id="step3-section">
+    <div class="setup-card-title">
+      <div class="setup-card-num">3</div>
+      NEXT STEPS
+    </div>
+    <div class="setup-card-sub">ทำตามลำดับให้ครบก่อนเริ่มใช้งาน</div>
+
+    <div class="checklist" id="checklist">
+      <div class="check-item" onclick="toggleCheck(this)">
+        <div class="check-box"><span class="check-tick">✓</span></div>
+        <div>
+          <div class="check-label">บันทึกไฟล์เป็น js/config.js</div>
+          <div class="check-note">แทนที่ไฟล์ config.js เดิมในโฟลเดอร์ js/</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this)">
+        <div class="check-box"><span class="check-tick">✓</span></div>
+        <div>
+          <div class="check-label">รัน setup.sql ใน Supabase SQL Editor</div>
+          <div class="check-note">SQL Editor → New Query → Paste setup.sql → Run</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this)">
+        <div class="check-box"><span class="check-tick">✓</span></div>
+        <div>
+          <div class="check-label">สร้าง Storage Bucket ชื่อ "inbody-images" (Private)</div>
+          <div class="check-note">Storage → New Bucket → ชื่อ "inbody-images" → ปิด Public Access</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this)">
+        <div class="check-box"><span class="check-tick">✓</span></div>
+        <div>
+          <div class="check-label">Deploy Edge Function analyze-inbody</div>
+          <div class="check-note">supabase functions deploy analyze-inbody — ต้องการ Supabase CLI</div>
+        </div>
+      </div>
+      <div class="check-item" onclick="toggleCheck(this)">
+        <div class="check-box"><span class="check-tick">✓</span></div>
+        <div>
+          <div class="check-label">Deploy ขึ้น Vercel</div>
+          <div class="check-note">Push ขึ้น GitHub → เชื่อมต่อ Vercel → Auto-deploy ฟรี</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <a href="index.html" class="btn btn-primary" style="text-decoration:none">
+        🚀 เริ่มใช้งาน FitBody →
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast">✅ คัดลอกสำเร็จแล้ว!</div>
+
+<!-- THEME SWITCHER -->
+<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(15,19,24,.95);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
+  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#5a6478;margin-right:2px">THEME</span>
+  <button onclick="setTheme('teal')" style="width:18px;height:18px;border-radius:50%;background:#2dd4bf;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-teal" title="Teal"></button>
+  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a78bfa;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
+  <button onclick="setTheme('ember')" style="width:18px;height:18px;border-radius:50%;background:#fb923c;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-ember" title="Ember"></button>
+</div>
+
+<script>
+// =================== THEME ===================
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t)
+  localStorage.setItem('fitbody_theme',t)
+  document.querySelectorAll('#theme-switcher button').forEach(b=>b.style.borderColor='transparent')
+  const el=document.getElementById('t-'+t)
+  if(el)el.style.borderColor='rgba(255,255,255,0.8)'
+}
+;(function(){
+  const t=localStorage.getItem('fitbody_theme')||'teal'
+  document.documentElement.setAttribute('data-theme',t)
+  document.addEventListener('DOMContentLoaded',()=>setTheme(t))
+})()
+
+// =================== PASSWORD TOGGLE ===================
+function toggleKeyVisibility() {
+  const inp = document.getElementById('inp-key')
+  const btn = document.getElementById('key-toggle')
+  const isPassword = inp.type === 'password'
+  inp.type = isPassword ? 'text' : 'password'
+  btn.textContent = isPassword ? '🙈' : '👁'
+}
+
+// =================== LIVE INPUT VALIDATION ===================
+function onInputChange() {
+  const url = document.getElementById('inp-url').value.trim()
+  const key = document.getElementById('inp-key').value.trim()
+
+  // Clear error states on input
+  document.getElementById('inp-url').classList.remove('error-state')
+  document.getElementById('inp-key').classList.remove('error-state')
+}
+
+// =================== GENERATE CONFIG ===================
+function generateConfig() {
+  const url = document.getElementById('inp-url').value.trim()
+  const key = document.getElementById('inp-key').value.trim()
+
+  let hasError = false
+
+  // Validate URL
+  const urlInput = document.getElementById('inp-url')
+  const urlErr = document.getElementById('err-url')
+  if (!url || !url.startsWith('https://') || !url.includes('.supabase.co')) {
+    urlInput.classList.add('error-state')
+    urlErr.style.display = 'block'
+    hasError = true
+  } else {
+    urlInput.classList.remove('error-state')
+    urlErr.style.display = 'none'
+    urlInput.classList.add('valid')
+  }
+
+  // Validate Key
+  const keyInput = document.getElementById('inp-key')
+  const keyErr = document.getElementById('err-key')
+  if (!key || key.length < 20) {
+    keyInput.classList.add('error-state')
+    keyErr.style.display = 'block'
+    hasError = true
+  } else {
+    keyInput.classList.remove('error-state')
+    keyErr.style.display = 'none'
+    keyInput.classList.add('valid')
+  }
+
+  if (hasError) return
+
+  // Generate config content
+  const configContent = `// FitBody — Supabase Configuration
+// Generated by Setup Wizard · ${new Date().toLocaleDateString('th-TH')}
+// DO NOT commit this file to public repositories
+
+const SUPABASE_URL = '${url}'
+const SUPABASE_ANON_KEY = '${key}'
+const REDIRECT_URL = window.location.origin
+
+// Guard: prevent running without configuration
+if (SUPABASE_ANON_KEY === 'PASTE_YOUR_ANON_KEY_HERE') {
+  document.body.innerHTML = \`
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#080b10;font-family:monospace;color:#f87171;text-align:center;padding:20px">
+      <div>
+        <div style="font-size:3em;margin-bottom:16px">⚠️</div>
+        <div style="font-size:1.2em;margin-bottom:8px">FitBody not configured</div>
+        <div style="color:#5a6478;font-size:.82em">Please set SUPABASE_ANON_KEY in js/config.js</div>
+        <a href="setup.html" style="display:inline-block;margin-top:16px;color:#2dd4bf">→ Open Setup Wizard</a>
+      </div>
+    </div>
+  \`
+  throw new Error('SUPABASE_ANON_KEY not configured — open setup.html to configure')
+}`
+
+  // Show step 2
+  document.getElementById('output-config').value = configContent
+  document.getElementById('step2-section').style.display = 'block'
+  document.getElementById('step3-section').style.display = 'block'
+
+  // Update wizard steps
+  document.getElementById('ws-1').classList.remove('active')
+  document.getElementById('ws-1').classList.add('done')
+  document.getElementById('ws-2').classList.add('active')
+  document.getElementById('ws-3').classList.remove('active')
+
+  // Update progress
+  document.getElementById('progress-bar').style.width = '100%'
+
+  // Scroll to step 2
+  setTimeout(() => {
+    document.getElementById('step2-section').scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, 100)
+
+  // Update wizard to step 3 after brief delay (both are visible)
+  setTimeout(() => {
+    document.getElementById('ws-2').classList.remove('active')
+    document.getElementById('ws-2').classList.add('done')
+    document.getElementById('ws-3').classList.add('active')
+  }, 600)
+}
+
+// =================== COPY CONFIG ===================
+function copyConfig() {
+  const content = document.getElementById('output-config').value
+  if (!content.trim()) {
+    showToast('กรุณา Generate ก่อน', false)
+    return
+  }
+
+  navigator.clipboard.writeText(content).then(() => {
+    const btn = document.getElementById('copy-btn')
+    btn.classList.add('copied')
+    btn.textContent = '✅ คัดลอกแล้ว!'
+    showToast('✅ คัดลอก config.js สำเร็จแล้ว!')
+    setTimeout(() => {
+      btn.classList.remove('copied')
+      btn.innerHTML = '📋 Copy config.js'
+    }, 2500)
+  }).catch(() => {
+    // Fallback for browsers without clipboard API
+    document.getElementById('output-config').select()
+    document.execCommand('copy')
+    showToast('✅ คัดลอกสำเร็จ (fallback mode)')
+  })
+}
+
+// =================== TOAST ===================
+function showToast(msg, success = true) {
+  const toast = document.getElementById('toast')
+  toast.textContent = msg
+  if (!success) {
+    toast.style.background = 'rgba(248,113,113,.12)'
+    toast.style.borderColor = 'rgba(248,113,113,.25)'
+    toast.style.color = '#f87171'
+  } else {
+    toast.style.background = 'rgba(74,222,128,.12)'
+    toast.style.borderColor = 'rgba(74,222,128,.25)'
+    toast.style.color = '#4ade80'
+  }
+  toast.classList.add('show')
+  setTimeout(() => toast.classList.remove('show'), 2800)
+}
+
+// =================== CHECKLIST ===================
+function toggleCheck(item) {
+  item.classList.toggle('checked')
+  // Update wizard step indicator
+  const total = document.querySelectorAll('.check-item').length
+  const done = document.querySelectorAll('.check-item.checked').length
+  if (done === total) {
+    document.getElementById('ws-3').classList.remove('active')
+    document.getElementById('ws-3').classList.add('done')
+  } else {
+    document.getElementById('ws-3').classList.remove('done')
+    document.getElementById('ws-3').classList.add('active')
+  }
+}
+</script>
+</body>
+</html>

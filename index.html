@@ -14,6 +14,7 @@
   --surface2: #161b24;
   --border: rgba(255,255,255,0.08);
   --accent: #2dd4bf;
+  --accent-hover: #20bfad;
   --accent2: #ff6b35;
   --accent3: #4ade80;
   --accent4: #60a5fa;
@@ -23,6 +24,8 @@
   --font-b: 'Noto Sans Thai', sans-serif;
   --font-m: 'DM Mono', monospace;
 }
+[data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
+[data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:var(--font-b);background:var(--bg);color:var(--text)}
 body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;overflow-x:hidden}
@@ -31,7 +34,7 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;pad
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
 
 /* glow */
-.glow{position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(45,212,191,0.12) 0%,transparent 70%);pointer-events:none;z-index:0}
+.glow{position:fixed;top:-100px;left:50%;transform:translateX(-50%);width:600px;height:400px;background:radial-gradient(ellipse,rgba(45,212,191,0.12) 0%,transparent 70%);pointer-events:none;z-index:0;background:radial-gradient(ellipse,rgba(var(--glow-rgb,45,212,191),0.12) 0%,transparent 70%)}
 
 .container{position:relative;z-index:1;width:100%;max-width:420px}
 
@@ -59,7 +62,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 /* BUTTONS */
 .btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s;margin-bottom:10px}
 .btn-primary{background:var(--accent);color:#080b10}
-.btn-primary:hover{background:#20bfad;transform:translateY(-1px)}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px)}
 .btn-primary:active{transform:translateY(0)}
 .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .btn-google{background:var(--surface2);color:var(--text);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;border-radius:12px;cursor:pointer;transition:all .2s;font-family:var(--font-b);font-size:.88em;font-weight:600;margin-bottom:10px}
@@ -325,6 +328,29 @@ function checkPasswordStrength(val) {
 
 // Start
 checkSession()
+</script>
+
+<!-- THEME SWITCHER -->
+<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(15,19,24,.95);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
+  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#5a6478;margin-right:2px">THEME</span>
+  <button onclick="setTheme('teal')" style="width:18px;height:18px;border-radius:50%;background:#2dd4bf;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-teal" title="Teal"></button>
+  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a78bfa;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
+  <button onclick="setTheme('ember')" style="width:18px;height:18px;border-radius:50%;background:#fb923c;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-ember" title="Ember"></button>
+</div>
+
+<script>
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme',t)
+  localStorage.setItem('fitbody_theme',t)
+  document.querySelectorAll('#theme-switcher button').forEach(b=>b.style.borderColor='transparent')
+  const el=document.getElementById('t-'+t)
+  if(el)el.style.borderColor='rgba(255,255,255,0.8)'
+}
+;(function(){
+  const t=localStorage.getItem('fitbody_theme')||'teal'
+  document.documentElement.setAttribute('data-theme',t)
+  document.addEventListener('DOMContentLoaded',()=>setTheme(t))
+})()
 </script>
 </body>
 </html>
