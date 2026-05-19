@@ -690,16 +690,53 @@ function openModal(key){
 function closeModal(){document.getElementById('modal').classList.remove('open');document.body.style.overflow=''}
 function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal()}
 
+// ======= EX KCAL ESTIMATE =======
+const EX_MET = {
+  squat:5.5,deadlift:6.0,benchpress:4.5,barbell_row:5.0,pullup:5.5,overhead_press:4.5,rdl:5.0,hipthrust:4.5,leg_press:4.0,
+  power_clean:7.0,muscle_up:6.0,kbswing:7.5,wallball:7.0,
+  incline_db_press:4.0,lat_pulldown:3.8,seated_cable_row:3.8,dips:4.5,walking_lunge:5.0,
+  lateral_raise:3.0,tricep_pushdown:3.0,chest_fly:3.0,face_pull:3.0,bicep_curl:3.0,hammer_curl:3.0,leg_curl:3.5,calf_raise:3.5,
+  burpee:9.0,box_jump:7.5,mountainclimber:8.0,amrap_circuit:8.5,emom:7.5,kb_complex:8.0,double_under:8.5,
+  zone2run:7.0,tempo_run:9.0,interval_400:10.0,strides:8.0,long_run:7.0,
+  zone2_cycle:6.5,cycling_interval:9.0,hill_climb_cycle:8.0,
+  row_machine:7.0,rowing_catch:7.0,steady_state_row:7.0,rowing_intervals:9.5,power_10:8.0,
+  freestyle_drill:8.0,kick_set:6.0,pull_set:7.0,swim_interval:9.0,
+  shadow_boxing:7.0,heavy_bag:8.0,jump_rope:9.0,core_muay:6.0,
+  shadowfootwork:7.0,lateral_bound:7.0,split_step_drill:7.5,jump_smash:8.0,core_rotation:5.0,reaction_drill:7.0,
+  agility_ladder:7.0,sprint_interval:10.0,dribbling_drill:7.0,shooting_drill:5.0,shooting_form:4.5,
+  sun_salutation:3.0,warrior_flow:3.0,hip_opener:2.5,spine_mobility:2.5,plank_yoga:3.5,restorative:2.0,
+  jab_cross_combo:7.5,boxing_defense:6.5,boxing_footwork:7.0,speed_bag:7.0,uppercut_body:7.5,
+  forehand_topspin:6.0,backhand_drill:6.0,tennis_serve:5.0,tennis_footwork:7.0,volley_drill:5.5,
+  dribble_combo:6.5,defensive_slide:7.0,vert_jump:8.0,
+  spike_approach:8.0,volleyball_serve:5.5,dig_receive:6.0,block_timing:7.5,
+  farmer_carry:5.5,ski_erg:8.5,sled_push:9.0,header_drill:6.5,
+}
+function exKcalEst(k, ex, wKg) {
+  const met = EX_MET[k] || (ex.primary.includes('full') ? 7 : ex.primary.includes('leg') ? 5 : 3.5)
+  const s = ex.sets || ''
+  let dur = 0, m
+  if ((m = s.match(/(\d+)[–—-](\d+)\s*นาที/)))            dur = (parseInt(m[1]) + parseInt(m[2])) / 2
+  else if ((m = s.match(/(\d+)[×x×](\d+)\s*นาที/)))       dur = parseInt(m[1]) * parseInt(m[2])
+  else if ((m = s.match(/(\d+)\s*นาที/)))                  dur = parseInt(m[1])
+  else if ((m = s.match(/(\d+)[×x×](\d+)\s*วิ/)))         dur = parseInt(m[1]) * parseInt(m[2]) / 60
+  else if ((m = s.match(/(\d+)\s*วิ/)))                    dur = parseInt(m[1]) / 60
+  else if ((m = s.match(/(\d+)[×x×]/)))                    dur = parseInt(m[1]) * 2.5
+  else                                                      dur = 8
+  return Math.max(1, Math.round(met * wKg * (dur / 60)))
+}
+
 // ======= BUILD EXERCISE LIST =======
 function buildExList(keys){
+  const wKg = userProfile?.weight_kg || 70
   return keys.map(k=>{
     const ex=EXERCISES[k];if(!ex)return''
     const chips=ex.primary.map(m=>`<span class="ex-chip ec-${m}">${mLabel(m)}</span>`).join('')
+    const kcal = exKcalEst(k, ex, wKg)
     return `<div class="ex-row" role="button" tabindex="0" onclick="openModal('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('${k}')}">
       <div class="ex-thumb">${getIcon(k)}</div>
       <div class="ex-info">
         <div class="ex-name">${ex.name}</div>
-        <div class="ex-meta"><span class="ex-set">${ex.sets}</span></div>
+        <div class="ex-meta"><span class="ex-set">${ex.sets}</span><span style="font-size:.75em;color:rgba(251,191,36,.65);font-family:var(--font-m);margin-left:6px">🔥~${kcal}kcal</span></div>
         <div class="ex-chips">${chips}</div>
       </div><span class="ex-arrow">›</span></div>`
   }).join('')
@@ -1084,23 +1121,34 @@ function generateWorkoutPlan(sports, goal, cr, freq) {
   const todayKey = jsToKey[new Date().getDay()]
   const defaultDay = dayBlocks[todayKey] ? todayKey : ORDER.find(d => dayBlocks[d]) || 'MON'
 
-  // Week grid — each day card is a tab
+  // Week grid — each day card is a tab (draggable to swap workouts)
   const gridHTML = ORDER.map(d => {
     const isActive = d === defaultDay
     const blocks = dayBlocks[d]
     const first = blocks && blocks[0]
     const icon = first ? (first.title.match(/^\S+/)||['💪'])[0] : '😴'
     const border = isActive ? 'border:2px solid var(--accent);background:rgba(168,85,247,.07)' : 'border:1px solid var(--border)'
-    return `<div class="day-card" role="button" tabindex="0" style="${border};cursor:pointer;transition:all .15s;position:relative" onclick="switchDayTab('${d}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchDayTab('${d}',this)}">
+    return `<div class="day-card" data-day="${d}" draggable="true" role="button" tabindex="0"
+      style="${border};cursor:grab;transition:all .15s;position:relative"
+      onclick="switchDayTab('${d}',this)"
+      ondragstart="wkDragStart(event,'${d}')"
+      ondragover="wkDragOver(event)"
+      ondragleave="wkDragLeave(event)"
+      ondrop="wkDrop(event,'${d}')"
+      ondragend="wkDragEnd(event)"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchDayTab('${d}',this)}"
+      ${isActive ? "data-active='1'" : ''}>
       ${isActive ? `<div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></div>` : ''}
       <div class="day-name" style="${isActive ? 'color:var(--accent)' : ''}">${d}</div>
-      <div class="day-icon">${icon}</div>
-      ${first
-        ? `<div class="day-type ${first.dayCls}" style="font-size:.48em;padding:1px 3px">${first.dayLabel}</div>
-           <div class="day-mins" style="font-size:.5em">${blocks.length} กิจกรรม</div>`
-        : `<div class="day-type dt-r" style="font-size:.52em">REST</div>
-           <div class="day-mins" style="font-size:.5em">ยืด</div>`
-      }
+      <div class="dc-inner">
+        <div class="day-icon">${icon}</div>
+        ${first
+          ? `<div class="day-type ${first.dayCls}" style="font-size:.48em;padding:1px 3px">${first.dayLabel}</div>
+             <div class="day-mins" style="font-size:.5em">${blocks.length} กิจกรรม</div>`
+          : `<div class="day-type dt-r" style="font-size:.52em">REST</div>
+             <div class="day-mins" style="font-size:.5em">ยืด</div>`
+        }
+      </div>
     </div>`
   }).join('')
 
@@ -1187,11 +1235,59 @@ function switchDayTab(day, clickedEl) {
   if (exPanel) exPanel.querySelectorAll('.day-card').forEach(c => {
     c.style.border = '1px solid var(--border)'
     c.style.background = ''
+    delete c.dataset.active
   })
   if (clickedEl) {
     clickedEl.style.border = '2px solid var(--accent)'
     clickedEl.style.background = 'rgba(168,85,247,.07)'
+    clickedEl.dataset.active = '1'
   }
+}
+
+// ======= WORKOUT DAY DRAG-SWAP =======
+let wkDragDay = null
+function wkDragStart(e, day) {
+  wkDragDay = day
+  e.dataTransfer.effectAllowed = 'move'
+  setTimeout(() => { if (e.currentTarget) e.currentTarget.style.opacity = '.35' }, 0)
+}
+function wkDragOver(e) {
+  e.preventDefault()
+  e.dataTransfer.dropEffect = 'move'
+  if (!e.currentTarget.dataset.active)
+    e.currentTarget.style.border = '2px dashed rgba(168,85,247,.55)'
+}
+function wkDragLeave(e) {
+  if (!e.currentTarget.dataset.active)
+    e.currentTarget.style.border = '1px solid var(--border)'
+}
+function wkDragEnd(e) {
+  e.currentTarget.style.opacity = '1'
+  if (!e.currentTarget.dataset.active)
+    e.currentTarget.style.border = '1px solid var(--border)'
+  wkDragDay = null
+}
+function wkDrop(e, targetDay) {
+  e.preventDefault()
+  if (!e.currentTarget.dataset.active)
+    e.currentTarget.style.border = '1px solid var(--border)'
+  if (!wkDragDay || wkDragDay === targetDay) { wkDragDay = null; return }
+  const srcCard = document.querySelector(`.day-card[data-day="${wkDragDay}"]`)
+  if (srcCard) { srcCard.style.opacity = '1'; srcCard.style.border = '1px solid var(--border)'; delete srcCard.dataset.active }
+
+  // Swap panel content
+  const srcPanel = document.getElementById('wp-' + wkDragDay)
+  const tgtPanel = document.getElementById('wp-' + targetDay)
+  if (srcPanel && tgtPanel) {
+    const tmp = srcPanel.innerHTML; srcPanel.innerHTML = tgtPanel.innerHTML; tgtPanel.innerHTML = tmp
+  }
+  // Swap day card inner (icon, badge, count — keep day name fixed)
+  const srcInner = document.querySelector(`.day-card[data-day="${wkDragDay}"] .dc-inner`)
+  const tgtInner = document.querySelector(`.day-card[data-day="${targetDay}"] .dc-inner`)
+  if (srcInner && tgtInner) {
+    const tmp = srcInner.innerHTML; srcInner.innerHTML = tgtInner.innerHTML; tgtInner.innerHTML = tmp
+  }
+  wkDragDay = null
 }
 
 // ======= PROFILE EDITOR =======
@@ -2003,9 +2099,8 @@ async function loadWeekFoodLogs() {
   const start7 = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6).toISOString()
   const { data, error } = await sb
     .from('food_logs')
-    .select('meal_type,calories_kcal,logged_at')
+    .select('meal_type,calories_kcal,water_ml,logged_at')
     .eq('user_id', currentUser.id)
-    .neq('meal_type', 'water')
     .gte('logged_at', start7)
     .lte('logged_at', end)
     .order('logged_at', { ascending: true })
@@ -2016,13 +2111,15 @@ async function loadWeekFoodLogs() {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
     const dateStr = d.toISOString().split('T')[0]
     const dl = data.filter(l => l.logged_at.startsWith(dateStr))
+    const food = dl.filter(l => l.meal_type !== 'water')
     days.push({
       label: DAY_TH[d.getDay()], isToday: i === 0,
-      totalCal: dl.reduce((s, l) => s + (l.calories_kcal || 0), 0),
-      breakfast: dl.filter(l => l.meal_type === 'breakfast').reduce((s, l) => s + (l.calories_kcal || 0), 0),
-      lunch:     dl.filter(l => l.meal_type === 'lunch').reduce((s, l) => s + (l.calories_kcal || 0), 0),
-      dinner:    dl.filter(l => l.meal_type === 'dinner').reduce((s, l) => s + (l.calories_kcal || 0), 0),
-      snack:     dl.filter(l => l.meal_type === 'snack').reduce((s, l) => s + (l.calories_kcal || 0), 0),
+      totalCal: food.reduce((s, l) => s + (l.calories_kcal || 0), 0),
+      waterMl:  dl.filter(l => l.meal_type === 'water').reduce((s, l) => s + (l.water_ml || 0), 0),
+      breakfast: food.filter(l => l.meal_type === 'breakfast').reduce((s, l) => s + (l.calories_kcal || 0), 0),
+      lunch:     food.filter(l => l.meal_type === 'lunch').reduce((s, l) => s + (l.calories_kcal || 0), 0),
+      dinner:    food.filter(l => l.meal_type === 'dinner').reduce((s, l) => s + (l.calories_kcal || 0), 0),
+      snack:     food.filter(l => l.meal_type === 'snack').reduce((s, l) => s + (l.calories_kcal || 0), 0),
     })
   }
   container.innerHTML = buildWeekChartHTML(days)
@@ -2072,6 +2169,21 @@ function buildWeekChartHTML(days) {
       </div>`
     : `<div style="font-size:.7em;color:var(--muted);text-align:center;padding:8px 0;border-top:1px solid var(--border);margin-top:10px">ยังไม่มีข้อมูลวันนี้</div>`
 
+  // Water chart
+  const waterTarget = 2000
+  const maxW = Math.max(...days.map(d => d.waterMl), waterTarget, 1)
+  const W_H = 36
+  const waterBars = days.map(d => {
+    const hw = d.waterMl > 0 ? Math.max(3, Math.round((d.waterMl / maxW) * W_H)) : 0
+    const wCol = d.waterMl >= waterTarget ? '#60a5fa' : d.waterMl > 0 ? 'rgba(96,165,250,.5)' : 'var(--surface3)'
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">
+      <div style="font-size:.45em;color:rgba(96,165,250,.7);height:12px;display:flex;align-items:flex-end">${d.waterMl > 0 ? (d.waterMl >= 1000 ? (d.waterMl/1000).toFixed(1)+'L' : d.waterMl+'ml') : ''}</div>
+      <div style="width:100%;height:${W_H}px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${hw}px;background:${wCol};border-radius:3px 3px 0 0"></div>
+      </div>
+    </div>`
+  }).join('')
+
   return `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
     <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);margin-bottom:10px">📊 แคลอรี่ 7 วัน</div>
     <div style="position:relative">
@@ -2080,6 +2192,11 @@ function buildWeekChartHTML(days) {
         ${bars}
       </div>
       <div style="text-align:right;font-size:.54em;color:var(--muted);margin-top:3px">เป้า ${target} kcal/วัน</div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px">
+      <div style="font-size:.63em;color:rgba(96,165,250,.7);font-family:var(--font-m);margin-bottom:8px">💧 น้ำ 7 วัน <span style="opacity:.55;font-size:.9em">เป้า ${waterTarget}ml/วัน</span></div>
+      <div style="display:flex;gap:4px">${waterBars}</div>
+      <div style="display:flex;gap:4px;margin-top:2px">${days.map(d=>`<div style="flex:1;text-align:center;font-size:.52em;color:${d.isToday?'var(--accent)':'var(--muted)'};font-weight:${d.isToday?700:400}">${d.label}</div>`).join('')}</div>
     </div>
     ${breakdownSection}
   </div>`
