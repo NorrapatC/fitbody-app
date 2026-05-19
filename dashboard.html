@@ -491,6 +491,7 @@ const { createClient } = supabase
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
 let todayLogs = [], diaryMealType = 'breakfast', diaryLoading = false
+let mealPlanDayIdx = new Date().getDay()
 let editSports = []
 let wtFreq = 3
 let pendingAvatarFile = null
@@ -732,6 +733,14 @@ function subHead(dot, label, sub) {
 }
 
 // ======= GENERATE WORKOUT BASED ON SPORTS + GOAL =======
+const WORKOUT_MET = {
+  'dt-w': { met:4.5, dur:65 },  // weight training
+  'dt-c': { met:7.5, dur:50 },  // cardio / zone2
+  'dt-h': { met:9.0, dur:45 },  // HIIT / metcon
+  'dt-a': { met:7.0, dur:60 },  // sport / agility
+  'dt-r': { met:2.5, dur:30 },  // rest / recovery
+}
+
 function generateWorkoutPlan(sports, goal, cr, freq) {
   const f = (freq && [2,3,4,5].includes(Number(freq))) ? Number(freq) : 3
   const has = s => sports.includes(s)
@@ -1100,14 +1109,20 @@ function generateWorkoutPlan(sports, goal, cr, freq) {
   ORDER.forEach(d => {
     if (!dayBlocks[d]) return
     const show = d === defaultDay
-    const inner = dayBlocks[d].map(block =>
-      `<div class="card" style="border-left:3px solid ${block.color}">
-        <div class="card-title"><span class="dot" style="background:${block.color}"></span>${block.title}</div>
-        <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">${block.sub||''}</div>
+    const inner = dayBlocks[d].map(block => {
+      const met = WORKOUT_MET[block.dayCls] || { met:5.0, dur:60 }
+      const wKg = userProfile?.weight_kg || 70
+      const kcalEst = Math.round(met.met * wKg * (met.dur / 60))
+      return `<div class="card" style="border-left:3px solid ${block.color}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+          <div class="card-title" style="margin:0"><span class="dot" style="background:${block.color}"></span>${block.title}</div>
+          <div style="flex-shrink:0;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:3px 8px;font-size:.6em;font-family:var(--font-m);color:#fbbf24;white-space:nowrap">🔥 ~${kcalEst} kcal</div>
+        </div>
+        <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">${block.sub||''} · ${met.dur} นาที</div>
         ${block.info ? `<div class="info-box ib-b" style="margin-bottom:10px"><strong>FORMAT</strong>${block.info}</div>` : ''}
         ${(block.sections||[]).map(s => subHead(s.dot||block.color, s.label, s.hint||'') + buildExList(s.ex)).join('')}
       </div>`
-    ).join('')
+    }).join('')
     panelsHTML += `<div id="wp-${d}" class="wp-day" style="display:${show ? 'block' : 'none'}">${inner}</div>`
   })
 
@@ -1610,32 +1625,34 @@ function _mealItemsHTML(items) {
 function _dayDotsHTML(dayIdx) {
   const dayNames = ['อา','จ','อ','พ','พฤ','ศ','ส']
   return dayNames.map((d,i) =>
-    `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;
+    `<span class="meal-day-dot" role="button" tabindex="0" onclick="selectMealDay(${i})"
+      style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;cursor:pointer;transition:all .15s;
       ${i===dayIdx?'background:var(--accent);color:#07050e':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d}</span>`
   ).join('')
 }
 
 // Render a meal plan object (from AI or fallback) into HTML
-function renderMealPlanHTML(plan, r) {
+function renderMealPlanHTML(plan, r, dayIdx) {
+  const activeDay = (dayIdx !== undefined) ? dayIdx : mealPlanDayIdx
   const p = r.proteinG, c = r.carbG, f = r.fatG
   const bp = Math.round(p*0.22), bc = Math.round(c*0.28), bf = Math.round(f*0.20)
   const lp = Math.round(p*0.29), lc = Math.round(c*0.32), lf = Math.round(f*0.35)
   const dp = Math.round(p*0.31), dc = Math.round(c*0.25), df = Math.round(f*0.35)
   const pp = Math.round(p*0.18), pc = Math.round(c*0.15), pf = Math.round(f*0.10)
 
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
+  const DAY_TH_FULL = ['วันอาทิตย์','วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์']
+  const dayLabel = DAY_TH_FULL[activeDay] || ''
 
   return `
     <div class="card" style="margin-bottom:12px;padding:12px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div>
-          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${escHtml(plan.day_label||'เมนูวันนี้')}</div>
-          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · สร้างโดย AI Gemini</div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${escHtml(plan.day_label||dayLabel)}</div>
+          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dayLabel} · สร้างโดย AI Gemini</div>
         </div>
         <button onclick="regenerateMealPlan()" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:5px 10px;font-size:.64em;color:var(--accent);cursor:pointer;font-family:var(--font-m)">🔄 เมนูใหม่</button>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(today.getDay())}</div>
+      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(activeDay)}</div>
     </div>
 
     <div class="meal-card">
@@ -1682,19 +1699,19 @@ function renderMealPlanHTML(plan, r) {
 }
 
 // Synchronous skeleton — rendered immediately while AI loads
-function generateFoodPlan(r) {
-  const today = new Date()
-  const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
+function generateFoodPlan(r, dayIdx) {
+  const activeDay = (dayIdx !== undefined) ? dayIdx : new Date().getDay()
+  const DAY_TH_FULL = ['วันอาทิตย์','วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์']
   return `
     <div class="card" style="margin-bottom:12px;padding:12px 16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div>
-          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">🤖 AI กำลังสร้างเมนูส่วนตัว...</div>
-          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · Gemini วิเคราะห์ข้อมูลร่างกายของคุณ</div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">🤖 กำลังสร้างเมนู${DAY_TH_FULL[activeDay]}...</div>
+          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${DAY_TH_FULL[activeDay]} · Gemini วิเคราะห์ข้อมูลร่างกายของคุณ</div>
         </div>
         <div class="loading-bar" style="width:80px;margin:0"><div class="loading-bar-fill"></div></div>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(today.getDay())}</div>
+      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(activeDay)}</div>
     </div>
     <div class="meal-card" style="min-height:80px;display:flex;align-items:center;justify-content:center">
       <div style="font-size:.78em;color:var(--muted);text-align:center">กำลังโหลด...</div>
@@ -1703,8 +1720,17 @@ function generateFoodPlan(r) {
 }
 
 // Async: fetch from Edge Function or fallback to static
-async function loadAIMealPlan(r) {
-  const cacheKey = `meal_plan_${new Date().toISOString().slice(0,10)}_${r.goal||''}`
+function selectMealDay(dayIdx) {
+  mealPlanDayIdx = dayIdx
+  if (calcData) loadAIMealPlan(calcData, dayIdx)
+}
+
+async function loadAIMealPlan(r, dayOverride) {
+  const day = (dayOverride !== undefined) ? dayOverride : new Date().getDay()
+  const isToday = day === new Date().getDay()
+  const cacheKey = isToday
+    ? `meal_plan_${new Date().toISOString().slice(0,10)}_${r.goal||''}`
+    : `meal_plan_dow${day}_${r.goal||''}`
   const cached = localStorage.getItem(cacheKey)
   const foodPanel = document.getElementById('tab-food')
   if (!foodPanel) return
@@ -1712,10 +1738,12 @@ async function loadAIMealPlan(r) {
   if (cached) {
     try {
       const plan = JSON.parse(cached)
-      foodPanel.innerHTML = renderMealPlanHTML(plan, r)
+      foodPanel.innerHTML = renderMealPlanHTML(plan, r, day)
       return
     } catch { localStorage.removeItem(cacheKey) }
   }
+
+  foodPanel.innerHTML = generateFoodPlan(r, day)
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 15000)
@@ -1733,7 +1761,7 @@ async function loadAIMealPlan(r) {
       body: JSON.stringify({
         proteinG: r.proteinG, carbG: r.carbG, fatG: r.fatG,
         targetCal: r.targetCal, goal: r.goal,
-        sports: r.sports || [], dayOfWeek: new Date().getDay()
+        sports: r.sports || [], dayOfWeek: day
       }),
       signal: controller.signal
     })
@@ -1744,7 +1772,7 @@ async function loadAIMealPlan(r) {
     if (plan.error) throw new Error(plan.error)
 
     localStorage.setItem(cacheKey, JSON.stringify(plan))
-    foodPanel.innerHTML = renderMealPlanHTML(plan, r)
+    foodPanel.innerHTML = renderMealPlanHTML(plan, r, day)
 
   } catch (err) {
     clearTimeout(timeoutId)
@@ -1844,76 +1872,51 @@ function buildDiaryHTML() {
 
   return `
     <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>สรุปวันนี้</div>
-      <div class="diary-rings-wrap">
-        <div class="diary-cal-ring">
-          <svg width="120" height="120" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="43" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="9"/>
-            <circle cx="60" cy="60" r="43" fill="none" stroke="${calColor}" stroke-width="9"
-              stroke-linecap="round" stroke-dasharray="${cCirc}"
-              data-ring-pct="${pCal}" data-ring-circ="${cCirc}"
-              style="stroke-dashoffset:${cCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)"/>
-          </svg>
-          <div class="diary-cal-center">
-            <div style="font-family:var(--font-d);font-size:1.45em;line-height:1;color:${calColor}">${Math.round(totalCal)}</div>
-            <div style="font-family:var(--font-m);font-size:.5em;color:var(--muted);margin-top:1px">/ ${tCal} kcal</div>
-            <div style="font-size:.52em;color:${calColor};margin-top:3px;font-weight:700">${pCal}%</div>
-          </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="card-title" style="margin:0"><span class="dot" style="background:var(--accent)"></span>สรุปวันนี้</div>
+        <div style="display:flex;gap:2px;background:var(--surface2);border-radius:20px;padding:3px">
+          <button id="ov-btn-today" onclick="switchOverview('today')" style="padding:4px 12px;border-radius:16px;border:none;background:var(--accent);color:#07050e;font-family:var(--font-b);font-size:.62em;cursor:pointer;font-weight:700;transition:all .2s">วันนี้</button>
+          <button id="ov-btn-week" onclick="switchOverview('week')" style="padding:4px 12px;border-radius:16px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.62em;cursor:pointer;transition:all .2s">📅 7วัน</button>
         </div>
-        <div class="diary-macro-rings">
-          <div class="diary-macro-ring-row">
-            <div class="diary-mini-ring">
-              <svg width="54" height="54" viewBox="0 0 54 54">
-                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
-                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent3)" stroke-width="5"
-                  stroke-linecap="round" stroke-dasharray="${mCirc}"
-                  data-ring-pct="${pP}" data-ring-circ="${mCirc}"
-                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .1s"/>
-              </svg>
-              <div class="diary-mini-center" style="color:var(--accent3)">${pP}%</div>
-            </div>
-            <div class="diary-macro-info">
-              <div class="diary-macro-label">🥩 โปรตีน</div>
-              <div class="diary-macro-val" style="color:var(--accent3)">${Math.round(totalP)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tP}g</span></div>
-            </div>
-          </div>
-          <div class="diary-macro-ring-row">
-            <div class="diary-mini-ring">
-              <svg width="54" height="54" viewBox="0 0 54 54">
-                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
-                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent4)" stroke-width="5"
-                  stroke-linecap="round" stroke-dasharray="${mCirc}"
-                  data-ring-pct="${pC}" data-ring-circ="${mCirc}"
-                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .2s"/>
-              </svg>
-              <div class="diary-mini-center" style="color:var(--accent4)">${pC}%</div>
-            </div>
-            <div class="diary-macro-info">
-              <div class="diary-macro-label">🌾 คาร์บ</div>
-              <div class="diary-macro-val" style="color:var(--accent4)">${Math.round(totalC)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tC}g</span></div>
+      </div>
+      <div id="ov-today">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="diary-cal-ring" style="width:104px;height:104px;flex-shrink:0">
+            <svg width="104" height="104" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="43" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="9"/>
+              <circle cx="60" cy="60" r="43" fill="none" stroke="${calColor}" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="${cCirc}"
+                data-ring-pct="${pCal}" data-ring-circ="${cCirc}"
+                style="stroke-dashoffset:${cCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)"/>
+            </svg>
+            <div class="diary-cal-center">
+              <div style="font-family:var(--font-d);font-size:1.3em;line-height:1;color:${calColor}">${Math.round(totalCal)}</div>
+              <div style="font-family:var(--font-m);font-size:.44em;color:var(--muted);margin-top:1px">/ ${tCal} kcal</div>
+              <div style="font-size:.46em;color:${calColor};margin-top:2px;font-weight:700">${pCal}%</div>
             </div>
           </div>
-          <div class="diary-macro-ring-row">
-            <div class="diary-mini-ring">
-              <svg width="54" height="54" viewBox="0 0 54 54">
-                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
-                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent2)" stroke-width="5"
-                  stroke-linecap="round" stroke-dasharray="${mCirc}"
-                  data-ring-pct="${pF}" data-ring-circ="${mCirc}"
-                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .3s"/>
-              </svg>
-              <div class="diary-mini-center" style="color:var(--accent2)">${pF}%</div>
-            </div>
-            <div class="diary-macro-info">
-              <div class="diary-macro-label">🧈 ไขมัน</div>
-              <div class="diary-macro-val" style="color:var(--accent2)">${Math.round(totalF)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tFat}g</span></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:9px">
+            ${[
+              {icon:'🥩',label:'โปรตีน',val:Math.round(totalP),max:tP,  pct:pP, col:'var(--accent3)'},
+              {icon:'🌾',label:'คาร์บ', val:Math.round(totalC),max:tC,  pct:pC, col:'var(--accent4)'},
+              {icon:'🧈',label:'ไขมัน', val:Math.round(totalF),max:tFat,pct:pF, col:'var(--accent2)'},
+            ].map(g=>`<div>
+              <div style="display:flex;justify-content:space-between;font-size:.57em;margin-bottom:3px">
+                <span style="color:var(--muted)">${g.icon} ${g.label}</span>
+                <span style="font-family:var(--font-m);color:${g.pct>=100?g.col:'var(--muted)'}">${g.val}<span style="opacity:.55">/${g.max}g</span></span>
+              </div>
+              <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden">
+                <div style="width:${Math.min(g.pct,100)}%;height:100%;background:${g.col};border-radius:4px;transition:width 1.2s cubic-bezier(.4,0,.2,1)"></div>
+              </div>
+            </div>`).join('')}
+            <div style="font-size:.56em;font-family:var(--font-m);text-align:right;margin-top:-3px">
+              ${pCal>=100?`<span style="color:var(--accent3)">✓ ถึงเป้าแล้ว!</span>`:`<span style="color:var(--muted)">ขาด ${tCal-Math.round(totalCal)} kcal</span>`}
             </div>
           </div>
         </div>
       </div>
+      <div id="week-chart-container" style="display:none"></div>
     </div>
-
-    <div id="week-chart-container"></div>
 
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>💧 น้ำ</div>
@@ -2069,8 +2072,8 @@ function buildWeekChartHTML(days) {
       </div>`
     : `<div style="font-size:.7em;color:var(--muted);text-align:center;padding:8px 0;border-top:1px solid var(--border);margin-top:10px">ยังไม่มีข้อมูลวันนี้</div>`
 
-  return `<div class="card" style="margin-bottom:8px">
-    <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>📊 แคลอรี่ 7 วัน</div>
+  return `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+    <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);margin-bottom:10px">📊 แคลอรี่ 7 วัน</div>
     <div style="position:relative">
       <div style="display:flex;gap:4px;position:relative">
         <div style="position:absolute;left:0;right:0;top:${targetLineTop + 14}px;border-top:1px dashed rgba(255,255,255,.18);pointer-events:none"></div>
@@ -2230,6 +2233,24 @@ function animateDiaryRings() {
       if (p < 1) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
+  }
+}
+
+function switchOverview(tab) {
+  const todayEl = document.getElementById('ov-today')
+  const weekEl  = document.getElementById('week-chart-container')
+  const btnT = document.getElementById('ov-btn-today')
+  const btnW = document.getElementById('ov-btn-week')
+  if (!todayEl || !weekEl) return
+  if (tab === 'today') {
+    todayEl.style.display = 'block'; weekEl.style.display = 'none'
+    if (btnT) { btnT.style.background='var(--accent)'; btnT.style.color='#07050e' }
+    if (btnW) { btnW.style.background='transparent';  btnW.style.color='var(--muted)' }
+  } else {
+    todayEl.style.display = 'none'; weekEl.style.display = 'block'
+    if (btnT) { btnT.style.background='transparent';  btnT.style.color='var(--muted)' }
+    if (btnW) { btnW.style.background='var(--accent)'; btnW.style.color='#07050e' }
+    if (!weekEl.innerHTML.trim()) loadWeekFoodLogs()
   }
 }
 
