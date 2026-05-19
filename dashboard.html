@@ -647,8 +647,9 @@ function generateWorkoutPlan(sports, goal, cr) {
   return html
 }
 
-// ======= DAILY MENU DATABASE (7 days rotation) =======
-const DAILY_MENUS = [
+// ======= GENERATE FOOD PLAN (AI-powered, daily rotation) =======
+// Legacy static fallback — used if Gemini Edge Function fails
+const FALLBACK_MENUS = [
   // 0 = อาทิตย์ — Light recovery day
   {
     label: 'วันอาทิตย์ — Recovery Day 🌿',
@@ -847,81 +848,79 @@ const DAILY_MENUS = [
   },
 ]
 
-// ======= GENERATE FOOD PLAN (daily rotation) =======
-function generateFoodPlan(r) {
+// ======= FOOD PLAN RENDERING HELPERS =======
+function _mealItemsHTML(items) {
+  if (!Array.isArray(items)) return ''
+  return items.map(it =>
+    `<div class="food-row"><div><div class="food-main">${it.main||''}</div><div class="food-alt">${it.alt||''}</div></div><div class="food-amt">${it.amt||''}</div></div>`
+  ).join('')
+}
+
+function _dayDotsHTML(dayIdx) {
+  const dayNames = ['อา','จ','อ','พ','พฤ','ศ','ส']
+  return dayNames.map((d,i) =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;
+      ${i===dayIdx?'background:var(--accent);color:#080b10':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d}</span>`
+  ).join('')
+}
+
+// Render a meal plan object (from AI or fallback) into HTML
+function renderMealPlanHTML(plan, r) {
   const p = r.proteinG, c = r.carbG, f = r.fatG
-  const breakfast_p = Math.round(p*0.22), breakfast_c = Math.round(c*0.28)
-  const lunch_p    = Math.round(p*0.29), lunch_c    = Math.round(c*0.32)
-  const dinner_p   = Math.round(p*0.31), dinner_c   = Math.round(c*0.25)
-  const post_p     = Math.round(p*0.18), post_c     = Math.round(c*0.15)
+  const bp = Math.round(p*0.22), bc = Math.round(c*0.28)
+  const lp = Math.round(p*0.29), lc = Math.round(c*0.32)
+  const dp = Math.round(p*0.31), dc = Math.round(c*0.25)
+  const pp = Math.round(p*0.18), pc = Math.round(c*0.15)
 
   const today = new Date()
-  const dayIdx = today.getDay()
-  const menu = DAILY_MENUS[dayIdx]
-  const dayNames = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์']
   const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
-
-  function mealItems(items) {
-    return items.map(it =>
-      `<div class="food-row"><div><div class="food-main">${it.main}</div><div class="food-alt">${it.alt}</div></div><div class="food-amt">${it.amt}</div></div>`
-    ).join('')
-  }
-
-  // Day navigation chips — show 7 dots, today highlighted
-  const dayDots = dayNames.map((d,i) =>
-    `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;cursor:default;
-      ${i===dayIdx?'background:var(--accent);color:#080b10':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d.slice(0,1)}</span>`
-  ).join('')
 
   return `
     <div class="card" style="margin-bottom:12px;padding:12px 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div>
-          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${menu.label}</div>
-          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · เมนูหมุนเวียนทุกวัน</div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${plan.day_label||'เมนูวันนี้'}</div>
+          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · สร้างโดย AI Gemini</div>
         </div>
-        <div style="font-size:1.4em">🍽️</div>
+        <button onclick="regenerateMealPlan()" style="background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);border-radius:8px;padding:5px 10px;font-size:.64em;color:var(--accent);cursor:pointer;font-family:var(--font-m)">🔄 เมนูใหม่</button>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:nowrap">${dayDots}</div>
+      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(today.getDay())}</div>
     </div>
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">☀️ มื้อเช้า — ${menu.breakfast.name}</div><div class="meal-time">06:30–08:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(breakfast_p*4+breakfast_c*4+f*9*0.2)} kcal</div>
+        <div><div class="meal-name">☀️ มื้อเช้า — ${plan.breakfast?.name||''}</div><div class="meal-time">06:30–08:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(bp*4+bc*4+f*9*0.2)} kcal</div>
       </div>
-      <div class="macro-chips"><span class="chip p">P ${breakfast_p}g</span><span class="chip c">C ${breakfast_c}g</span></div>
-      <div class="meal-body">${mealItems(menu.breakfast.items)}</div>
+      <div class="macro-chips"><span class="chip p">P ${bp}g</span><span class="chip c">C ${bc}g</span></div>
+      <div class="meal-body">${_mealItemsHTML(plan.breakfast?.items)}</div>
     </div>
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🌤️ มื้อกลางวัน — ${menu.lunch.name}</div><div class="meal-time">12:00–13:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(lunch_p*4+lunch_c*4+f*9*0.35)} kcal</div>
+        <div><div class="meal-name">🌤️ มื้อกลางวัน — ${plan.lunch?.name||''}</div><div class="meal-time">12:00–13:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(lp*4+lc*4+f*9*0.35)} kcal</div>
       </div>
-      <div class="macro-chips"><span class="chip p">P ${lunch_p}g</span><span class="chip c">C ${lunch_c}g</span></div>
-      <div class="meal-body">${mealItems(menu.lunch.items)}</div>
+      <div class="macro-chips"><span class="chip p">P ${lp}g</span><span class="chip c">C ${lc}g</span></div>
+      <div class="meal-body">${_mealItemsHTML(plan.lunch?.items)}</div>
     </div>
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🌙 มื้อเย็น — ${menu.dinner.name}</div><div class="meal-time">17:30–19:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(dinner_p*4+dinner_c*4+f*9*0.35)} kcal</div>
+        <div><div class="meal-name">🌙 มื้อเย็น — ${plan.dinner?.name||''}</div><div class="meal-time">17:30–19:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(dp*4+dc*4+f*9*0.35)} kcal</div>
       </div>
-      <div class="macro-chips"><span class="chip p">P ${dinner_p}g</span><span class="chip c">C ${dinner_c}g</span></div>
-      <div class="meal-body">${mealItems(menu.dinner.items)}</div>
+      <div class="macro-chips"><span class="chip p">P ${dp}g</span><span class="chip c">C ${dc}g</span></div>
+      <div class="meal-body">${_mealItemsHTML(plan.dinner?.items)}</div>
     </div>
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🥛 Post-Workout</div><div class="meal-time">ภายใน 30 นาทีหลังออกกำลังกาย</div></div>
-        <div class="meal-kcal">~${Math.round(post_p*4+post_c*4)} kcal</div>
+        <div><div class="meal-name">🥛 Post-Workout — ${plan.post_workout?.name||'Protein + Carb'}</div><div class="meal-time">ภายใน 30 นาทีหลังออกกำลังกาย</div></div>
+        <div class="meal-kcal">~${Math.round(pp*4+pc*4)} kcal</div>
       </div>
-      <div class="macro-chips"><span class="chip p">P ${post_p}g</span><span class="chip c">C ${post_c}g</span></div>
-      <div class="meal-body">
-        <div class="food-row"><div><div class="food-main">Whey Protein</div><div class="food-alt">ทางเลือก: นมจืดพร่องมัน 2 กล่อง</div></div><div class="food-amt">1 scoop</div></div>
-        <div class="food-row"><div><div class="food-main">กล้วยหอม</div><div class="food-alt">ทางเลือก: ข้าว 0.5 ทัพพี</div></div><div class="food-amt">1 ลูก</div></div>
-      </div>
+      <div class="macro-chips"><span class="chip p">P ${pp}g</span><span class="chip c">C ${pc}g</span></div>
+      <div class="meal-body">${_mealItemsHTML(plan.post_workout?.items)}</div>
     </div>
 
     <div class="card"><div class="card-title"><span class="dot" style="background:var(--red)"></span>ของที่ต้องหลีกเลี่ยง</div>
@@ -935,6 +934,100 @@ function generateFoodPlan(r) {
       <div style="font-family:var(--font-d);font-size:1.2em;color:var(--accent);margin-bottom:6px">ถ่ายรูปอาหาร → นับแคลอรี่</div>
       <div style="font-size:.72em;color:var(--muted);line-height:1.7">ถ่ายรูปจานอาหารของคุณ<br>AI วิเคราะห์แคลอรี่ + โปรตีน + คาร์บ<br>อัตโนมัติด้วย Gemini Vision</div>
     </div>`
+}
+
+// Synchronous skeleton — rendered immediately while AI loads
+function generateFoodPlan(r) {
+  const today = new Date()
+  const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
+  return `
+    <div class="card" style="margin-bottom:12px;padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">🤖 AI กำลังสร้างเมนูส่วนตัว...</div>
+          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · Gemini วิเคราะห์ข้อมูลร่างกายของคุณ</div>
+        </div>
+        <div class="loading-bar" style="width:80px;margin:0"><div class="loading-bar-fill"></div></div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(today.getDay())}</div>
+    </div>
+    <div class="meal-card" style="min-height:80px;display:flex;align-items:center;justify-content:center">
+      <div style="font-size:.78em;color:var(--muted);text-align:center">กำลังโหลด...</div>
+    </div>
+    <div id="food-plan-content"></div>`
+}
+
+// Async: fetch from Edge Function or fallback to static
+async function loadAIMealPlan(r) {
+  const cacheKey = `meal_plan_${new Date().toISOString().slice(0,10)}_${r.goal||''}`
+  const cached = localStorage.getItem(cacheKey)
+  const foodPanel = document.getElementById('tab-food')
+  if (!foodPanel) return
+
+  if (cached) {
+    try {
+      const plan = JSON.parse(cached)
+      foodPanel.innerHTML = renderMealPlanHTML(plan, r)
+      return
+    } catch { localStorage.removeItem(cacheKey) }
+  }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) throw new Error('no session')
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-meal-plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        proteinG: r.proteinG, carbG: r.carbG, fatG: r.fatG,
+        targetCal: r.targetCal, goal: r.goal,
+        sports: r.sports || [], dayOfWeek: new Date().getDay()
+      })
+    })
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const plan = await res.json()
+    if (plan.error) throw new Error(plan.error)
+
+    localStorage.setItem(cacheKey, JSON.stringify(plan))
+    foodPanel.innerHTML = renderMealPlanHTML(plan, r)
+
+  } catch (err) {
+    // Fallback to static menu — never leave user without food plan
+    const dayIdx = new Date().getDay()
+    const fallback = FALLBACK_MENUS[dayIdx]
+    const staticPlan = {
+      day_label: fallback.label,
+      breakfast: fallback.breakfast,
+      lunch: fallback.lunch,
+      dinner: fallback.dinner,
+      post_workout: {
+        name: 'Whey Protein + กล้วย',
+        items: [
+          {main:'Whey Protein',alt:'ทางเลือก: นมจืดพร่องมัน 2 กล่อง',amt:'1 scoop'},
+          {main:'กล้วยหอม',alt:'ทางเลือก: ข้าว 0.5 ทัพพี',amt:'1 ลูก'},
+        ]
+      }
+    }
+    foodPanel.innerHTML = renderMealPlanHTML(staticPlan, r)
+      + `<div style="font-size:.62em;color:var(--muted);text-align:center;padding:8px;font-family:var(--font-m)">⚠️ ใช้เมนูสำรอง — เชื่อมต่อ AI ไม่ได้</div>`
+    console.warn('Meal plan AI failed, using fallback:', err.message)
+  }
+}
+
+// Force regenerate — clears cache for today then reloads
+function regenerateMealPlan() {
+  const today = new Date().toISOString().slice(0,10)
+  Object.keys(localStorage).filter(k => k.startsWith(`meal_plan_${today}`)).forEach(k => localStorage.removeItem(k))
+  const foodPanel = document.getElementById('tab-food')
+  if (foodPanel) {
+    foodPanel.innerHTML = generateFoodPlan(calcData)
+    loadAIMealPlan(calcData)
+  }
 }
 
 // ======= HISTORY TAB =======
@@ -1028,6 +1121,9 @@ function renderDashboard(profile, record, allRecords) {
     </div>
     <div class="footer">FITBODY · ${currentUser?.email||''}</div>
   `
+
+  // Async: load AI meal plan after DOM is ready
+  loadAIMealPlan(cr)
 }
 
 function switchTab(id, el) {
