@@ -2271,7 +2271,7 @@ function renderDashboard(profile, record, allRecords) {
   const weight = record.weight_kg
   const fatPct = record.body_fat_pct
   const muscle = record.muscle_kg
-  const score = record.inbody_score
+  const bmi = record.bmi
   const sports = profile.sports || []
   const goal = profile.goal || 'fat_loss'
 
@@ -2297,7 +2297,7 @@ function renderDashboard(profile, record, allRecords) {
     <div class="sc w"><div class="sc-label">น้ำหนัก</div><div class="sc-num">${weight}</div><div class="sc-sub">kg</div></div>
     <div class="sc d"><div class="sc-label">%ไขมัน</div><div class="sc-num">${fatPct}</div><div class="sc-sub">% เป้า ${profile.gender==='female'?22:15}%</div></div>
     <div class="sc g"><div class="sc-label">กล้ามเนื้อ</div><div class="sc-num">${muscle}</div><div class="sc-sub">kg</div></div>
-    <div class="sc i"><div class="sc-label">InBody</div><div class="sc-num">${score||'—'}</div><div class="sc-sub">/100</div></div>
+    <div class="sc i"><div class="sc-label">BMI</div><div class="sc-num">${bmi||'—'}</div><div class="sc-sub">kg/m²</div></div>
   `
 
   // TARGET
@@ -2455,7 +2455,7 @@ async function init() {
   document.getElementById('loading-msg').textContent = 'กำลังโหลดข้อมูลของคุณ...'
   const [profileRes, recordsRes] = await Promise.all([
     sb.from('profiles').select('name,age,height_cm,gender,goal,activity_level,sports,avatar_url,wt_freq').eq('id', currentUser.id).single(),
-    sb.from('inbody_records').select('id,recorded_at,weight_kg,body_fat_pct,muscle_kg,fat_kg,bmi,visceral_fat,inbody_score,input_method').eq('user_id', currentUser.id).order('recorded_at', {ascending: false})
+    sb.from('inbody_records').select('id,recorded_at,weight_kg,body_fat_pct,muscle_kg,fat_kg,bmi,visceral_fat,input_method').eq('user_id', currentUser.id).order('recorded_at', {ascending: false})
   ])
 
   if (profileRes.error && profileRes.error.code !== 'PGRST116') {
