@@ -208,6 +208,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
 .footer{text-align:center;padding:16px;font-family:var(--font-m);font-size:.58em;color:var(--muted)}
 
+/* SPORTS EDITOR MODAL */
+#sports-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:1100;display:none;align-items:flex-end;justify-content:center}
+#sports-modal.open{display:flex;animation:fadeOverlay .2s ease}
+.sports-sheet{background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.2,1,.3,1);padding-bottom:env(safe-area-inset-bottom,20px)}
+.sport-tag{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.8em;cursor:pointer;transition:all .18s;margin:4px}
+.sport-tag.active{border-color:var(--accent);background:rgba(45,212,191,.1);color:var(--accent)}
+.sports-current-tag{display:inline-flex;align-items:center;gap:4px;font-size:.72em;padding:4px 10px;border-radius:12px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:var(--accent);font-family:var(--font-b);margin:2px}
+
 /* PROGRESS TOAST */
 #progress-toast{position:fixed;bottom:0;left:0;right:0;z-index:500;padding:0 14px 14px;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,1,.3,1);pointer-events:none}
 #progress-toast.open{transform:translateY(0);pointer-events:all}
@@ -316,12 +324,50 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   </div>
 </div>
 
+<!-- SPORTS EDITOR BOTTOM SHEET -->
+<div id="sports-modal" onclick="closeSportsEditorOutside(event)">
+  <div class="sports-sheet">
+    <div class="modal-drag"></div>
+    <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);position:relative;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-family:var(--font-d);font-size:1.5em;letter-spacing:.04em">แก้ไขกีฬาที่สนใจ</div>
+        <div style="font-size:.68em;color:var(--muted);margin-top:3px;font-family:var(--font-m)">เลือกได้หลายอย่าง — แผนออกกำลังกายจะอัปเดตทันที</div>
+      </div>
+      <button onclick="closeSportsEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+    </div>
+    <div id="sports-tags-wrap" style="padding:16px 16px 8px;display:flex;flex-wrap:wrap"></div>
+    <div style="padding:8px 20px 16px;display:flex;gap:10px">
+      <button onclick="closeSportsEditor()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.82em;cursor:pointer">ยกเลิก</button>
+      <button onclick="saveSports()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ======= SUPABASE =======
 const { createClient } = supabase
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
 let todayLogs = [], diaryMealType = 'breakfast'
+let editSports = []
+
+const SPORT_LIST = [
+  {key:'weight_training', label:'🏋️ เวทเทรนนิ่ง'},
+  {key:'running',         label:'🏃 วิ่ง'},
+  {key:'badminton',       label:'🏸 แบดมินตัน'},
+  {key:'swimming',        label:'🏊 ว่ายน้ำ'},
+  {key:'cycling',         label:'🚴 จักรยาน'},
+  {key:'hyrox',           label:'⚡ Hyrox'},
+  {key:'football',        label:'⚽ ฟุตบอล'},
+  {key:'muaythai',        label:'🥊 มวยไทย'},
+  {key:'yoga',            label:'🧘 โยคะ'},
+  {key:'crossfit',        label:'🔥 CrossFit'},
+  {key:'boxing',          label:'🥊 มวยสากล'},
+  {key:'tennis',          label:'🎾 เทนนิส'},
+  {key:'basketball',      label:'🏀 บาสเกตบอล'},
+  {key:'volleyball',      label:'🏐 วอลเลย์บอล'},
+  {key:'rowing',          label:'🚣 เรือ'},
+]
 
 // ======= EXERCISE DATABASE =======
 const EXERCISES = {
@@ -544,334 +590,396 @@ function subHead(dot, label, sub) {
 // ======= GENERATE WORKOUT BASED ON SPORTS + GOAL =======
 function generateWorkoutPlan(sports, goal, cr) {
   const has = s => sports.includes(s)
-  const hasWT = has('weight_training')
-  const hasBad = has('badminton')
-  const hasRun = has('running')
-  const hasHyrox = has('hyrox')
-  const hasSwim = has('swimming')
-  const hasCycle = has('cycling')
-  const hasFoot = has('football')
-  const hasMuay = has('muaythai')
-  const hasYoga = has('yoga')
-  const hasCF = has('crossfit')
-  const hasBox = has('boxing')
-  const hasTennis = has('tennis')
-  const hasBball = has('basketball')
-  const hasVball = has('volleyball')
-  const hasRow = has('rowing')
+  const hasWT = has('weight_training'), hasBad = has('badminton'), hasRun = has('running')
+  const hasHyrox = has('hyrox'), hasSwim = has('swimming'), hasCycle = has('cycling')
+  const hasFoot = has('football'), hasMuay = has('muaythai'), hasYoga = has('yoga')
+  const hasCF = has('crossfit'), hasBox = has('boxing'), hasTennis = has('tennis')
+  const hasBball = has('basketball'), hasVball = has('volleyball'), hasRow = has('rowing')
   const noSport = sports.length === 0
 
-  // ---- WEEK SCHEDULE ----
-  let days = []
-  if (hasWT || noSport) days.push(
-    {name:'MON',icon:'🏋️',type:'PUSH',cls:'dt-w',mins:'50 min'},
-    {name:'WED',icon:'🏋️',type:'PULL',cls:'dt-w',mins:'50 min'},
-    {name:'FRI',icon:'🦵',type:'LEGS',cls:'dt-w',mins:'55 min'}
-  )
-  if (hasBad) days.push({name:'TUE',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'90 min'},{name:'SAT',icon:'🏸',type:'MATCH',cls:'dt-a',mins:'120 min'})
-  if (hasRun) days.push({name:'TUE',icon:'🏃',type:'ZONE 2',cls:'dt-c',mins:'40 min'},{name:'THU',icon:'🏃',type:'INTERVALS',cls:'dt-h',mins:'30 min'},{name:'SAT',icon:'🏃',type:'LONG RUN',cls:'dt-c',mins:'75 min'})
-  if (hasHyrox) days.push({name:'THU',icon:'🔥',type:'HYROX SIM',cls:'dt-h',mins:'40 min'},{name:'SAT',icon:'🔥',type:'STR FOUND',cls:'dt-h',mins:'50 min'})
-  if (hasSwim) days.push({name:'TUE',icon:'🏊',type:'TECHNIQUE',cls:'dt-a',mins:'45 min'},{name:'THU',icon:'🏊',type:'INTERVALS',cls:'dt-h',mins:'40 min'})
-  if (hasCycle) days.push({name:'TUE',icon:'🚴',type:'ZONE 2',cls:'dt-c',mins:'60 min'},{name:'SAT',icon:'🚴',type:'INTERVALS',cls:'dt-h',mins:'40 min'})
-  if (hasFoot) days.push({name:'TUE',icon:'⚽',type:'TECHNIQUE',cls:'dt-a',mins:'90 min'},{name:'THU',icon:'⚡',type:'FITNESS',cls:'dt-h',mins:'45 min'})
-  if (hasMuay) days.push({name:'TUE',icon:'🥊',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🥊',type:'CONDITIONING',cls:'dt-h',mins:'60 min'})
-  if (hasYoga) days.push({name:'WED',icon:'🧘',type:'YOGA FLOW',cls:'dt-c',mins:'45 min'},{name:'SUN',icon:'🧘',type:'RESTORATIVE',cls:'dt-r',mins:'30 min'})
-  if (hasCF) days.push({name:'MON',icon:'🔥',type:'METCON',cls:'dt-h',mins:'40 min'},{name:'WED',icon:'🏋️',type:'STRENGTH',cls:'dt-w',mins:'50 min'},{name:'FRI',icon:'⏱️',type:'EMOM/AMRAP',cls:'dt-h',mins:'30 min'})
-  if (hasBox) days.push({name:'TUE',icon:'🥊',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🛡️',type:'SPARRING',cls:'dt-h',mins:'60 min'})
-  if (hasTennis) days.push({name:'TUE',icon:'🎾',type:'GROUNDSTROKE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🎾',type:'MATCH PLAY',cls:'dt-h',mins:'90 min'})
-  if (hasBball) days.push({name:'TUE',icon:'🏀',type:'SKILLS',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🏀',type:'GAME',cls:'dt-h',mins:'90 min'})
-  if (hasVball) days.push({name:'TUE',icon:'🏐',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🏐',type:'SCRIMMAGE',cls:'dt-h',mins:'90 min'})
-  if (hasRow) days.push({name:'TUE',icon:'🚣',type:'TECHNIQUE',cls:'dt-a',mins:'45 min'},{name:'SAT',icon:'🚣',type:'INTERVALS',cls:'dt-h',mins:'50 min'})
+  // dayBlocks[day] = [{color, dayLabel, dayCls, title, sub, info?, sections:[{dot,label,hint?,ex:[]}]}]
+  const dayBlocks = {}
+  const pushDay = (day, block) => { if (!dayBlocks[day]) dayBlocks[day] = []; dayBlocks[day].push(block) }
 
-  const order = ['MON','TUE','WED','THU','FRI','SAT','SUN']
-  const byName = {}
-  days.forEach(d => { if(!byName[d.name]) byName[d.name] = d })
-  if (!byName['SUN']) byName['SUN'] = {name:'SUN',icon:'😴',type:'REST',cls:'dt-r',mins:'ยืด'}
-  const weekDays = order.filter(n => byName[n]).map(n => byName[n])
-  const weekHTML = weekDays.map(d=>`<div class="day-card"><div class="day-name">${d.name}</div><div class="day-icon">${d.icon}</div><div class="day-type ${d.cls}">${d.type}</div><div class="day-mins">${d.mins}</div></div>`).join('')
-
-  let html = `<div class="card"><div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์</div><div class="week-grid">${weekHTML}</div></div>`
-
-  // ===== WEIGHT TRAINING =====
+  // WEIGHT TRAINING
   if (hasWT || noSport) {
-    html += `<div class="card" style="border-left:3px solid var(--accent4)">
-      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏋️ WEIGHT TRAINING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Push / Pull / Legs Split · ${goal==='muscle_gain'?'Volume เน้นเพิ่มกล้ามเนื้อ':goal==='fat_loss'?'Compound + Superset เผาแคล':'Maintenance'}</div>
-
-      ${subHead('var(--accent4)','จันทร์ — PUSH DAY','อก · ไหล่ · Tricep')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Compound ก่อน → 🟡 Isolation ท้าย</div>
-      ${buildExList(['benchpress','incline_db_press','overhead_press'])}
-      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Isolation —</div>
-      ${buildExList(['lateral_raise','tricep_pushdown','chest_fly','dips'])}
-
-      ${subHead('var(--accent3)','พุธ — PULL DAY','หลัง · Bicep · Rear Shoulder')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Width ก่อน (Pull-up/Pulldown) → 🟢 Thickness ต่อ (Row)</div>
-      ${buildExList(['pullup','lat_pulldown'])}
-      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Thickness + Rear —</div>
-      ${buildExList(['barbell_row','seated_cable_row','face_pull','bicep_curl','hammer_curl'])}
-
-      ${subHead('var(--red)','ศุกร์ — LEG DAY','ขา · Glute · น่อง')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Bilateral Compound → 🔴 Hip Hinge → 🟡 Isolation</div>
-      ${buildExList(['squat','leg_press'])}
-      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Hip Hinge + Glute —</div>
-      ${buildExList(['rdl','hipthrust','walking_lunge'])}
-      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Isolation —</div>
-      ${buildExList(['leg_curl','calf_raise'])}
-    </div>`
+    const subGoal = goal==='muscle_gain'?'Volume · Progressive Overload':goal==='fat_loss'?'Compound + Superset · Deficit':'Maintenance'
+    pushDay('MON', { color:'var(--accent4)', dayLabel:'PUSH', dayCls:'dt-w',
+      title:'🏋️ PUSH DAY', sub:'อก · ไหล่ · Tricep · '+subGoal, sections:[
+        { dot:'var(--accent4)', label:'Compound', hint:'🔵 Big Press First', ex:['benchpress','incline_db_press','overhead_press'] },
+        { dot:'var(--accent)', label:'Isolation', hint:'🟡 High Rep', ex:['lateral_raise','tricep_pushdown','chest_fly','dips'] }
+    ]})
+    pushDay('WED', { color:'var(--accent3)', dayLabel:'PULL', dayCls:'dt-w',
+      title:'🏋️ PULL DAY', sub:'หลัง · Bicep · Rear Shoulder', sections:[
+        { dot:'var(--accent4)', label:'Width', hint:'🔵 Pull-up/Pulldown ก่อน', ex:['pullup','lat_pulldown'] },
+        { dot:'var(--accent3)', label:'Thickness + Rear', ex:['barbell_row','seated_cable_row','face_pull','bicep_curl','hammer_curl'] }
+    ]})
+    pushDay('FRI', { color:'var(--red)', dayLabel:'LEGS', dayCls:'dt-w',
+      title:'🦵 LEG DAY', sub:'ขา · Glute · น่อง', sections:[
+        { dot:'var(--accent4)', label:'Bilateral Compound', ex:['squat','leg_press'] },
+        { dot:'var(--red)', label:'Hip Hinge + Glute', ex:['rdl','hipthrust','walking_lunge'] },
+        { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
+    ]})
   }
 
-  // ===== HYROX =====
+  // HYROX
   if (hasHyrox) {
-    html += `<div class="card" style="border-left:3px solid var(--accent2)">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 HYROX PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Functional Fitness · 8 Stations + 1km Runs</div>
-
-      ${subHead('var(--accent2)','พฤหัส — HYROX SIMULATION','Circuit เลียนแบบ Race')}
-      <div class="info-box ib-b" style="margin-bottom:10px"><strong>CIRCUIT FORMAT</strong>Row 500m → KB Swing 20 → Wall Ball 20 → Burpee BJ 10 → พัก 3 min × 3 รอบ</div>
-      ${buildExList(['row_machine','kbswing','wallball','burpee'])}
-
-      ${subHead('var(--accent)','เสาร์ — STRENGTH FOUNDATIONS','แรงพื้นฐาน')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Deadlift + Carry — ฝึก Functional Strength</div>
-      ${buildExList(['deadlift','farmer_carry'])}
-      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Power + Conditioning —</div>
-      ${buildExList(['box_jump','ski_erg','sled_push','double_under'])}
-    </div>`
+    pushDay('THU', { color:'var(--accent2)', dayLabel:'HYROX', dayCls:'dt-h',
+      title:'🔥 HYROX SIMULATION', sub:'Circuit เลียนแบบ Race · 3 รอบ',
+      info:'Row 500m → KB Swing 20 → Wall Ball 20 → Burpee BJ 10 → พัก 3 min × 3 รอบ',
+      sections:[{ dot:'var(--accent2)', label:'Circuit Stations', ex:['row_machine','kbswing','wallball','burpee'] }]
+    })
+    pushDay('SAT', { color:'var(--accent)', dayLabel:'STR', dayCls:'dt-h',
+      title:'🔥 STRENGTH FOUNDATIONS', sub:'แรงพื้นฐาน · Hyrox', sections:[
+        { dot:'var(--accent4)', label:'Deadlift + Carry', ex:['deadlift','farmer_carry'] },
+        { dot:'var(--accent2)', label:'Power + Conditioning', ex:['box_jump','ski_erg','sled_push','double_under'] }
+    ]})
   }
 
-  // ===== BADMINTON =====
+  // BADMINTON
   if (hasBad) {
-    html += `<div class="card" style="border-left:3px solid var(--accent5)">
-      <div class="card-title"><span class="dot" style="background:var(--accent5)"></span>🏸 BADMINTON PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Court Movement + Stroke Skill + Off-Court Conditioning</div>
-
-      ${subHead('var(--accent5)','👣 Footwork & Movement','ทุกเซสชัน ทำก่อนตี 15 นาที')}
-      ${buildExList(['shadowfootwork','split_step_drill','lateral_bound'])}
-
-      ${subHead('var(--accent4)','🏸 Stroke & Skill','On-Court Practice')}
-      ${buildExList(['reaction_drill','jump_smash'])}
-
-      ${subHead('var(--accent3)','💪 Off-Court Conditioning','วันไม่เล่นแบด')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Core + Legs + Wrist Endurance</div>
-      ${buildExList(['core_rotation','squat','walking_lunge','calf_raise'])}
-
-      ${subHead('var(--muted)','🔄 Recovery','หลัง Match')}
-      ${buildExList(['restorative'])}
-    </div>`
+    pushDay('TUE', { color:'var(--accent5)', dayLabel:'BAD', dayCls:'dt-a',
+      title:'🏸 BADMINTON', sub:'Footwork · Stroke · Conditioning', sections:[
+        { dot:'var(--accent5)', label:'Footwork & Movement', hint:'ทำก่อนตีเสมอ 15 นาที', ex:['shadowfootwork','split_step_drill','lateral_bound'] },
+        { dot:'var(--accent4)', label:'On-Court Stroke', ex:['reaction_drill','jump_smash'] },
+        { dot:'var(--accent3)', label:'Off-Court Conditioning', ex:['core_rotation','squat','calf_raise'] }
+    ]})
+    pushDay('SAT', { color:'var(--accent5)', dayLabel:'MATCH', dayCls:'dt-a',
+      title:'🏸 MATCH + RECOVERY', sub:'ซ้อมแข่ง + ฟื้นฟู', sections:[
+        { dot:'var(--accent5)', label:'Pre-Match Warm-up', ex:['shadowfootwork','split_step_drill'] },
+        { dot:'var(--muted)', label:'Post-Match Recovery', ex:['restorative'] }
+    ]})
   }
 
-  // ===== RUNNING =====
+  // RUNNING
   if (hasRun) {
-    html += `<div class="card" style="border-left:3px solid var(--accent3)">
-      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🏃 RUNNING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">3 Run/week · ฝึก Aerobic Base + Speed + Endurance</div>
-
-      ${subHead('var(--accent3)','🏃 อังคาร — AEROBIC BASE','Zone 2 • ฝึก Fat Oxidation')}
-      ${buildExList(['zone2run'])}
-
-      ${subHead('var(--accent2)','⚡ พฤหัส — SPEED WORK','Intervals + Strides')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔴 Intervals ก่อน → Strides ตามท้าย</div>
-      ${buildExList(['interval_400','strides'])}
-
-      ${subHead('var(--accent4)','🌄 เสาร์ — LONG + TEMPO','Endurance + Threshold')}
-      ${buildExList(['long_run','tempo_run'])}
-    </div>`
+    pushDay('TUE', { color:'var(--accent3)', dayLabel:'ZONE2', dayCls:'dt-c',
+      title:'🏃 AEROBIC BASE', sub:'Zone 2 Run · Fat Oxidation · 30–40 min',
+      sections:[{ dot:'var(--accent3)', label:'Zone 2 Easy Run', ex:['zone2run'] }]
+    })
+    pushDay('THU', { color:'var(--accent2)', dayLabel:'SPEED', dayCls:'dt-h',
+      title:'🏃 SPEED WORK', sub:'Intervals + Strides · VO2Max', sections:[
+        { dot:'var(--accent2)', label:'Intervals', hint:'🔴 Push เต็มสปีด', ex:['interval_400'] },
+        { dot:'var(--accent3)', label:'Strides (ท้าย)', ex:['strides'] }
+    ]})
+    pushDay('SAT', { color:'var(--accent4)', dayLabel:'LONG', dayCls:'dt-c',
+      title:'🌄 LONG RUN + TEMPO', sub:'Endurance + Threshold', sections:[
+        { dot:'var(--accent3)', label:'Long Run', ex:['long_run'] },
+        { dot:'var(--accent2)', label:'Tempo Run', ex:['tempo_run'] }
+    ]})
   }
 
-  // ===== SWIMMING =====
+  // SWIMMING
   if (hasSwim) {
-    html += `<div class="card" style="border-left:3px solid var(--accent4)">
-      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏊 SWIMMING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Technique + Endurance · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('var(--accent4)','🎯 อังคาร — TECHNIQUE DAY','Drill Sets')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Catch-up → Kick → Pull — แยก Focus ทีละส่วน</div>
-      ${buildExList(['freestyle_drill','kick_set','pull_set'])}
-
-      ${subHead('var(--accent2)','⚡ พฤหัส — INTERVAL DAY','Speed + VO2Max')}
-      ${buildExList(['swim_interval'])}
-    </div>`
+    pushDay('TUE', { color:'var(--accent4)', dayLabel:'TECH', dayCls:'dt-a',
+      title:'🏊 TECHNIQUE DAY', sub:'Drill Sets · Focus Technique',
+      sections:[{ dot:'var(--accent4)', label:'Freestyle Drills', ex:['freestyle_drill','kick_set','pull_set'] }]
+    })
+    pushDay('THU', { color:'var(--accent2)', dayLabel:'INTV', dayCls:'dt-h',
+      title:'🏊 INTERVAL DAY', sub:'Speed + VO2Max',
+      sections:[{ dot:'var(--accent2)', label:'Swim Intervals', ex:['swim_interval'] }]
+    })
   }
 
-  // ===== CYCLING =====
+  // CYCLING
   if (hasCycle) {
-    html += `<div class="card" style="border-left:3px solid var(--accent3)">
-      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🚴 CYCLING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Zone 2 Base + HIIT + Hill Climb · Cadence 80–90 RPM</div>
-
-      ${subHead('var(--accent3)','🌿 อังคาร — AEROBIC BASE','Zone 2 Long Ride')}
-      ${buildExList(['zone2_cycle'])}
-
-      ${subHead('var(--accent2)','⚡ เสาร์ — HIGH INTENSITY','Intervals + Hill')}
-      ${buildExList(['cycling_interval','hill_climb_cycle'])}
-    </div>`
+    pushDay('TUE', { color:'var(--accent3)', dayLabel:'Z2', dayCls:'dt-c',
+      title:'🚴 AEROBIC BASE', sub:'Zone 2 Ride · 45–60 min · Cadence 80–90 RPM',
+      sections:[{ dot:'var(--accent3)', label:'Zone 2 Cycling', ex:['zone2_cycle'] }]
+    })
+    pushDay('SAT', { color:'var(--accent2)', dayLabel:'HIIT', dayCls:'dt-h',
+      title:'🚴 HIGH INTENSITY', sub:'Intervals + Hill Climb', sections:[
+        { dot:'var(--accent2)', label:'HIIT Cycling', ex:['cycling_interval'] },
+        { dot:'var(--accent3)', label:'Hill Climb', ex:['hill_climb_cycle'] }
+    ]})
   }
 
-  // ===== FOOTBALL =====
+  // FOOTBALL
   if (hasFoot) {
-    html += `<div class="card" style="border-left:3px solid var(--accent2)">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>⚽ FOOTBALL FITNESS</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Speed · Agility · Technique · Endurance</div>
-
-      ${subHead('var(--accent5)','🎯 เทคนิค (อังคาร)','Skill-based Practice')}
-      ${buildExList(['dribbling_drill','shooting_drill','header_drill'])}
-
-      ${subHead('var(--accent2)','⚡ ฟิตเนส (พฤหัส)','Speed + Agility + Endurance')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Sprint → Agility → Endurance Run</div>
-      ${buildExList(['sprint_interval','agility_ladder','zone2run'])}
-
-      ${subHead('var(--accent4)','💪 Strength Support','Gym Off-Season')}
-      ${buildExList(['squat','walking_lunge','calf_raise'])}
-    </div>`
+    pushDay('TUE', { color:'var(--accent2)', dayLabel:'TECH', dayCls:'dt-a',
+      title:'⚽ FOOTBALL TECHNIQUE', sub:'Skill-based Practice',
+      sections:[{ dot:'var(--accent5)', label:'เทคนิค', ex:['dribbling_drill','shooting_drill','header_drill'] }]
+    })
+    pushDay('THU', { color:'var(--accent)', dayLabel:'FIT', dayCls:'dt-h',
+      title:'⚽ FOOTBALL FITNESS', sub:'Speed + Agility + Endurance', sections:[
+        { dot:'var(--accent2)', label:'Speed + Agility', ex:['sprint_interval','agility_ladder'] },
+        { dot:'var(--accent4)', label:'Strength Support', ex:['squat','walking_lunge','calf_raise'] }
+    ]})
   }
 
-  // ===== MUAY THAI =====
+  // MUAY THAI
   if (hasMuay) {
-    html += `<div class="card" style="border-left:3px solid var(--red)">
-      <div class="card-title"><span class="dot" style="background:var(--red)"></span>🥊 MUAY THAI PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Striking · Clinch · Conditioning · 2–3 ครั้ง/สัปดาห์</div>
-
-      ${subHead('var(--accent)','🥊 Warm-up & Conditioning','เริ่มทุก Session')}
-      ${buildExList(['jump_rope'])}
-
-      ${subHead('var(--red)','🎯 Striking Technique','Shadow + Bag + Pads')}
-      ${buildExList(['shadow_boxing','heavy_bag'])}
-
-      ${subHead('var(--accent2)','💪 Core & Power','ฝึกหลัง Technique')}
-      ${buildExList(['core_muay','burpee','mountainclimber'])}
-    </div>`
+    pushDay('TUE', { color:'var(--red)', dayLabel:'MUAY', dayCls:'dt-h',
+      title:'🥊 MUAY THAI — TECHNIQUE', sub:'Shadow + Bag + Conditioning', sections:[
+        { dot:'var(--accent)', label:'Warm-up', ex:['jump_rope'] },
+        { dot:'var(--red)', label:'Striking', ex:['shadow_boxing','heavy_bag'] },
+        { dot:'var(--accent2)', label:'Core & Power', ex:['core_muay','burpee','mountainclimber'] }
+    ]})
+    pushDay('THU', { color:'var(--red)', dayLabel:'COND', dayCls:'dt-h',
+      title:'🥊 MUAY THAI — CONDITIONING', sub:'Fitness + Power Session',
+      sections:[{ dot:'var(--red)', label:'Conditioning', ex:['jump_rope','shadow_boxing','core_muay'] }]
+    })
   }
 
-  // ===== YOGA / PILATES =====
+  // YOGA
   if (hasYoga) {
-    html += `<div class="card" style="border-left:3px solid #34d399">
-      <div class="card-title"><span class="dot" style="background:#34d399"></span>🧘 YOGA / PILATES PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Flexibility · Core · Mobility · Recovery · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#34d399','🌅 Active Flow (พุธ)','Sun Salutation + Warrior')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Flow ต่อเนื่อง → Strength Poses → Inversion</div>
-      ${buildExList(['sun_salutation','warrior_flow','plank_yoga'])}
-
-      ${subHead('#34d399','🌿 Hip & Spine Mobility','ทำทุกวันได้')}
-      ${buildExList(['hip_opener','spine_mobility'])}
-
-      ${subHead('var(--muted)','😌 Restorative (อาทิตย์)','10–15 นาที หลัง Hard Day')}
-      ${buildExList(['restorative'])}
-    </div>`
+    pushDay('WED', { color:'#34d399', dayLabel:'FLOW', dayCls:'dt-c',
+      title:'🧘 YOGA — ACTIVE FLOW', sub:'Sun Salutation + Warrior + Core', sections:[
+        { dot:'#34d399', label:'Active Flow', ex:['sun_salutation','warrior_flow','plank_yoga'] },
+        { dot:'#34d399', label:'Hip & Spine Mobility', ex:['hip_opener','spine_mobility'] }
+    ]})
+    pushDay('SUN', { color:'#34d399', dayLabel:'REST', dayCls:'dt-r',
+      title:'🧘 RESTORATIVE YOGA', sub:'Active Recovery · 10–15 min',
+      sections:[{ dot:'#34d399', label:'Restorative', ex:['restorative','hip_opener','spine_mobility'] }]
+    })
   }
 
-  // ===== CROSSFIT / HIIT =====
+  // CROSSFIT
   if (hasCF) {
-    html += `<div class="card" style="border-left:3px solid var(--accent2)">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 CROSSFIT / HIIT PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">MetCon · Olympic Lifting · Gymnastics · 3 ครั้ง/สัปดาห์</div>
-
-      ${subHead('var(--accent4)','🏋️ จันทร์ — STRENGTH','Barbell + Olympic')}
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Strength ก่อน MetCon เสมอ</div>
-      ${buildExList(['deadlift','power_clean'])}
-
-      ${subHead('var(--accent2)','🔥 พุธ — METCON','AMRAP / For Time')}
-      ${buildExList(['amrap_circuit','emom','double_under'])}
-
-      ${subHead('var(--accent3)','💪 ศุกร์ — GYMNASTICS + KB','Bodyweight + Conditioning')}
-      ${buildExList(['muscle_up','kb_complex','burpee','box_jump'])}
-    </div>`
+    pushDay('MON', { color:'var(--accent2)', dayLabel:'STR', dayCls:'dt-h',
+      title:'🔥 CROSSFIT — STRENGTH', sub:'Barbell + Olympic Lifting',
+      sections:[{ dot:'var(--accent4)', label:'Strength', hint:'ก่อน MetCon เสมอ', ex:['deadlift','power_clean'] }]
+    })
+    pushDay('WED', { color:'var(--accent2)', dayLabel:'META', dayCls:'dt-h',
+      title:'🔥 CROSSFIT — METCON', sub:'AMRAP / For Time / EMOM',
+      sections:[{ dot:'var(--accent2)', label:'MetCon', ex:['amrap_circuit','emom','double_under'] }]
+    })
+    pushDay('FRI', { color:'var(--accent2)', dayLabel:'GYM', dayCls:'dt-h',
+      title:'🔥 CROSSFIT — GYMNASTICS + KB', sub:'Bodyweight + Kettlebell',
+      sections:[{ dot:'var(--accent3)', label:'Gymnastics + KB', ex:['muscle_up','kb_complex','burpee','box_jump'] }]
+    })
   }
 
-  // ===== BOXING =====
+  // BOXING
   if (hasBox) {
-    html += `<div class="card" style="border-left:3px solid #f43f5e">
-      <div class="card-title"><span class="dot" style="background:#f43f5e"></span>🥊 BOXING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Offense · Defense · Footwork · Conditioning · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#f43f5e','🥊 Offense (อังคาร)','Punching Combinations')}
-      ${buildExList(['jab_cross_combo','uppercut_body','speed_bag'])}
-
-      ${subHead('#f43f5e','🛡️ Defense & Footwork (พฤหัส)','Slip · Roll · Move')}
-      ${buildExList(['boxing_defense','boxing_footwork'])}
-
-      ${subHead('var(--accent2)','💪 Conditioning','ทุก Session')}
-      ${buildExList(['jump_rope','core_muay'])}
-    </div>`
+    pushDay('TUE', { color:'#f43f5e', dayLabel:'ATK', dayCls:'dt-h',
+      title:'🥊 BOXING — OFFENSE', sub:'Punching Combinations + Speed Bag',
+      sections:[{ dot:'#f43f5e', label:'Combinations + Bag', ex:['jab_cross_combo','uppercut_body','speed_bag'] }]
+    })
+    pushDay('THU', { color:'#f43f5e', dayLabel:'DEF', dayCls:'dt-h',
+      title:'🥊 BOXING — DEFENSE + FOOTWORK', sub:'Slip · Roll · Move · Conditioning', sections:[
+        { dot:'#f43f5e', label:'Defense & Footwork', ex:['boxing_defense','boxing_footwork'] },
+        { dot:'var(--accent2)', label:'Conditioning', ex:['jump_rope','core_muay'] }
+    ]})
   }
 
-  // ===== TENNIS =====
+  // TENNIS
   if (hasTennis) {
-    html += `<div class="card" style="border-left:3px solid #facc15">
-      <div class="card-title"><span class="dot" style="background:#facc15"></span>🎾 TENNIS PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Groundstrokes · Serve · Net · Footwork · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#facc15','🎾 Groundstroke Day (อังคาร)','Forehand + Backhand')}
-      ${buildExList(['forehand_topspin','backhand_drill','tennis_footwork'])}
-
-      ${subHead('#facc15','🎯 Serve & Net (พฤหัส)','Weapon + Net Game')}
-      ${buildExList(['tennis_serve','volley_drill'])}
-
-      ${subHead('var(--accent2)','💪 On-Court Fitness','Agility + Conditioning')}
-      ${buildExList(['agility_ladder','sprint_interval'])}
-    </div>`
+    pushDay('TUE', { color:'#facc15', dayLabel:'GND', dayCls:'dt-a',
+      title:'🎾 TENNIS — GROUNDSTROKE', sub:'Forehand + Backhand + Footwork',
+      sections:[{ dot:'#facc15', label:'Groundstrokes', ex:['forehand_topspin','backhand_drill','tennis_footwork'] }]
+    })
+    pushDay('THU', { color:'#facc15', dayLabel:'SRV', dayCls:'dt-a',
+      title:'🎾 TENNIS — SERVE + NET', sub:'Weapon + Net Game + Agility', sections:[
+        { dot:'#facc15', label:'Serve & Net', ex:['tennis_serve','volley_drill'] },
+        { dot:'var(--accent2)', label:'On-Court Fitness', ex:['agility_ladder','sprint_interval'] }
+    ]})
   }
 
-  // ===== BASKETBALL =====
+  // BASKETBALL
   if (hasBball) {
-    html += `<div class="card" style="border-left:3px solid #f97316">
-      <div class="card-title"><span class="dot" style="background:#f97316"></span>🏀 BASKETBALL PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Ball Handling · Shooting · Defense · Athleticism · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#f97316','🏀 Skills Day (อังคาร)','Handle + Shoot')}
-      ${buildExList(['dribble_combo','shooting_form'])}
-
-      ${subHead('#f97316','🛡️ Defense + Athleticism (พฤหัส)','Slide + Jump + Speed')}
-      ${buildExList(['defensive_slide','vert_jump','agility_ladder','sprint_interval'])}
-    </div>`
+    pushDay('TUE', { color:'#f97316', dayLabel:'SKILL', dayCls:'dt-a',
+      title:'🏀 BASKETBALL — SKILLS', sub:'Ball Handling + Shooting',
+      sections:[{ dot:'#f97316', label:'Handle + Shoot', ex:['dribble_combo','shooting_form'] }]
+    })
+    pushDay('THU', { color:'#f97316', dayLabel:'DEF', dayCls:'dt-h',
+      title:'🏀 BASKETBALL — DEFENSE + ATHLETICISM', sub:'Slide + Jump + Speed',
+      sections:[{ dot:'#f97316', label:'Defense & Athleticism', ex:['defensive_slide','vert_jump','agility_ladder','sprint_interval'] }]
+    })
   }
 
-  // ===== VOLLEYBALL =====
+  // VOLLEYBALL
   if (hasVball) {
-    html += `<div class="card" style="border-left:3px solid #818cf8">
-      <div class="card-title"><span class="dot" style="background:#818cf8"></span>🏐 VOLLEYBALL PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Passing · Serving · Attacking · Blocking · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#818cf8','🏐 Receiving (อังคาร)','Pass + Serve + Dig')}
-      ${buildExList(['dig_receive','volleyball_serve'])}
-
-      ${subHead('#818cf8','💥 Attack & Block (พฤหัส)','Spike + Block + Jump')}
-      ${buildExList(['spike_approach','block_timing','vert_jump'])}
-    </div>`
+    pushDay('TUE', { color:'#818cf8', dayLabel:'RCV', dayCls:'dt-a',
+      title:'🏐 VOLLEYBALL — RECEIVING', sub:'Pass + Serve + Dig',
+      sections:[{ dot:'#818cf8', label:'Receiving', ex:['dig_receive','volleyball_serve'] }]
+    })
+    pushDay('THU', { color:'#818cf8', dayLabel:'ATK', dayCls:'dt-a',
+      title:'🏐 VOLLEYBALL — ATTACK + BLOCK', sub:'Spike + Block + Jump',
+      sections:[{ dot:'#818cf8', label:'Attack & Block', ex:['spike_approach','block_timing','vert_jump'] }]
+    })
   }
 
-  // ===== ROWING =====
+  // ROWING
   if (hasRow) {
-    html += `<div class="card" style="border-left:3px solid #22d3ee">
-      <div class="card-title"><span class="dot" style="background:#22d3ee"></span>🚣 ROWING PROGRAM</div>
-      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Technique · Endurance · Power · 2 ครั้ง/สัปดาห์</div>
-
-      ${subHead('#22d3ee','🎯 Technique Day (อังคาร)','Catch → Drive → Finish → Recovery')}
-      ${buildExList(['rowing_catch','power_10','steady_state_row'])}
-
-      ${subHead('#22d3ee','⚡ Interval Day (เสาร์)','Speed + VO2Max')}
-      ${buildExList(['rowing_intervals'])}
-    </div>`
+    pushDay('TUE', { color:'#22d3ee', dayLabel:'TECH', dayCls:'dt-c',
+      title:'🚣 ROWING — TECHNIQUE', sub:'Catch → Drive → Finish → Recovery',
+      sections:[{ dot:'#22d3ee', label:'Technique + Steady State', ex:['rowing_catch','power_10','steady_state_row'] }]
+    })
+    pushDay('SAT', { color:'#22d3ee', dayLabel:'INTV', dayCls:'dt-h',
+      title:'🚣 ROWING — INTERVALS', sub:'Speed + VO2Max · 4×2000m',
+      sections:[{ dot:'#22d3ee', label:'Race-Pace Intervals', ex:['rowing_intervals'] }]
+    })
   }
 
-  // ===== HIIT Fallback =====
-  if (noSport || (!hasWT && !hasHyrox && !hasBad && !hasRun && !hasSwim && !hasCycle && !hasFoot && !hasMuay && !hasYoga && !hasCF && !hasBox && !hasTennis && !hasBball && !hasVball && !hasRow)) {
-    html += `<div class="card" style="border-left:3px solid var(--accent2)">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 GENERAL HIIT</div>
-      ${buildExList(['burpee','mountainclimber','box_jump','amrap_circuit'])}
-    </div>`
+  // Recovery — SUN default if not claimed
+  if (!dayBlocks['SUN']) {
+    pushDay('SUN', { color:'var(--muted)', dayLabel:'REST', dayCls:'dt-r',
+      title:'😴 RECOVERY + MOBILITY', sub:'Active Rest · Stretch · ฟื้นฟู',
+      sections:[{ dot:'var(--muted)', label:'Light Mobility', ex:['spine_mobility','hip_opener','restorative'] }]
+    })
   }
 
-  // ===== RECOVERY =====
-  html += `<div class="card">
-    <div class="card-title"><span class="dot" style="background:var(--muted)"></span>😴 Recovery & Mobility</div>
-    <div class="info-box ib-y"><strong>กฎเหล็ก</strong>
-      นอนหลับ 7–8 ชั่วโมง · Progressive Overload: เพิ่ม Weight/Rep 2–5% ทุก 2 สัปดาห์<br>
-      Deload ทุก 4–6 สัปดาห์ (ลด Volume 40%) · อาการบาดเจ็บ → หยุด อย่าฝืน
+  // HIIT fallback if no sport
+  if (noSport && !dayBlocks['MON']) {
+    pushDay('MON', { color:'var(--accent2)', dayLabel:'HIIT', dayCls:'dt-h',
+      title:'🔥 GENERAL HIIT', sub:'Full Body Conditioning',
+      sections:[{ dot:'var(--accent2)', label:'Circuit', ex:['burpee','mountainclimber','box_jump','amrap_circuit'] }]
+    })
+  }
+
+  // Determine default active day (today or first active)
+  const ORDER = ['MON','TUE','WED','THU','FRI','SAT','SUN']
+  const jsToKey = ['SUN','MON','TUE','WED','THU','FRI','SAT']
+  const todayKey = jsToKey[new Date().getDay()]
+  const defaultDay = dayBlocks[todayKey] ? todayKey : ORDER.find(d => dayBlocks[d]) || 'MON'
+
+  // Week grid — each day card is a tab
+  const gridHTML = ORDER.map(d => {
+    const isActive = d === defaultDay
+    const blocks = dayBlocks[d]
+    const first = blocks && blocks[0]
+    const icon = first ? (first.title.match(/^\S+/)||['💪'])[0] : '😴'
+    const border = isActive ? 'border:2px solid var(--accent);background:rgba(45,212,191,.07)' : 'border:1px solid var(--border)'
+    return `<div class="day-card" style="${border};cursor:pointer;transition:all .15s;position:relative" onclick="switchDayTab('${d}',this)">
+      ${isActive ? `<div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></div>` : ''}
+      <div class="day-name" style="${isActive ? 'color:var(--accent)' : ''}">${d}</div>
+      <div class="day-icon">${icon}</div>
+      ${first
+        ? `<div class="day-type ${first.dayCls}" style="font-size:.48em;padding:1px 3px">${first.dayLabel}</div>
+           <div class="day-mins" style="font-size:.5em">${blocks.length} กิจกรรม</div>`
+        : `<div class="day-type dt-r" style="font-size:.52em">REST</div>
+           <div class="day-mins" style="font-size:.5em">ยืด</div>`
+      }
+    </div>`
+  }).join('')
+
+  // Day panels
+  let panelsHTML = ''
+  ORDER.forEach(d => {
+    if (!dayBlocks[d]) return
+    const show = d === defaultDay
+    const inner = dayBlocks[d].map(block =>
+      `<div class="card" style="border-left:3px solid ${block.color}">
+        <div class="card-title"><span class="dot" style="background:${block.color}"></span>${block.title}</div>
+        <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">${block.sub||''}</div>
+        ${block.info ? `<div class="info-box ib-b" style="margin-bottom:10px"><strong>FORMAT</strong>${block.info}</div>` : ''}
+        ${(block.sections||[]).map(s => subHead(s.dot||block.color, s.label, s.hint||'') + buildExList(s.ex)).join('')}
+      </div>`
+    ).join('')
+    panelsHTML += `<div id="wp-${d}" class="wp-day" style="display:${show ? 'block' : 'none'}">${inner}</div>`
+  })
+
+  // REST panel for days with no scheduled content
+  panelsHTML += `<div id="wp-REST" class="wp-day" style="display:none">
+    <div class="card" style="text-align:center;padding:clamp(20px,5vw,32px)">
+      <div style="font-size:2.8em;margin-bottom:10px">😴</div>
+      <div style="font-family:var(--font-d);font-size:1.6em;color:var(--accent);margin-bottom:8px">REST DAY</div>
+      <div style="font-size:.8em;color:var(--muted);line-height:1.8">วันพักผ่อน — ให้ร่างกายฟื้นฟูตัวเอง<br>เดิน ยืด หรือ Light Mobility เบาๆ ได้</div>
     </div>
-    ${buildExList(['spine_mobility','hip_opener','restorative'])}
+    <div class="card">${subHead('var(--muted)','😌 Active Recovery (ไม่บังคับ)','')}${buildExList(['spine_mobility','hip_opener','restorative'])}</div>
   </div>`
 
-  return html
+  const sportTagsHTML = sports.length === 0
+    ? `<span style="font-size:.72em;color:var(--muted)">ยังไม่ได้เลือกกีฬา</span>`
+    : sports.map(k => {
+        const s = SPORT_LIST.find(x => x.key === k)
+        return s ? `<span class="sports-current-tag">${s.label}</span>` : ''
+      }).join('')
+
+  return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">กีฬาที่เล่น</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0">${sportTagsHTML}</div>
+    </div>
+    <button onclick="openSportsEditor()" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;white-space:nowrap">✏️ แก้ไข</button>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์ <span style="font-size:.74em;color:var(--muted);font-weight:400;font-family:var(--font-m)">แตะวันเพื่อดูโปรแกรม</span></div>
+    <div class="week-grid" style="margin-bottom:0">${gridHTML}</div>
+  </div>
+  ${panelsHTML}
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--muted)"></span>😴 Recovery Tips</div>
+    <div class="info-box ib-y"><strong>กฎเหล็ก</strong>นอนหลับ 7–8 ชั่วโมง · Progressive Overload: เพิ่ม Weight/Rep 2–5% ทุก 2 สัปดาห์<br>Deload ทุก 4–6 สัปดาห์ (ลด Volume 40%) · อาการบาดเจ็บ → หยุด อย่าฝืน</div>
+  </div>`
+}
+
+function switchDayTab(day, clickedEl) {
+  document.querySelectorAll('.wp-day').forEach(p => p.style.display = 'none')
+  const target = document.getElementById('wp-' + day) || document.getElementById('wp-REST')
+  if (target) {
+    target.style.display = 'block'
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+  const exPanel = document.getElementById('tab-exercise')
+  if (exPanel) exPanel.querySelectorAll('.day-card').forEach(c => {
+    c.style.border = '1px solid rgba(255,255,255,.08)'
+    c.style.background = ''
+  })
+  if (clickedEl) {
+    clickedEl.style.border = '2px solid var(--accent)'
+    clickedEl.style.background = 'rgba(45,212,191,.07)'
+  }
+}
+
+// ======= SPORTS EDITOR =======
+function openSportsEditor() {
+  editSports = [...(userProfile?.sports || [])]
+  const wrap = document.getElementById('sports-tags-wrap')
+  if (wrap) {
+    wrap.innerHTML = SPORT_LIST.map(s => {
+      const active = editSports.includes(s.key)
+      return `<button class="sport-tag${active?' active':''}" id="se-${s.key}" onclick="toggleSportEdit('${s.key}',this)">${s.label}</button>`
+    }).join('')
+  }
+  document.getElementById('sports-modal').classList.add('open')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeSportsEditor() {
+  document.getElementById('sports-modal').classList.remove('open')
+  document.body.style.overflow = ''
+}
+
+function closeSportsEditorOutside(e) {
+  if (e.target === document.getElementById('sports-modal')) closeSportsEditor()
+}
+
+function toggleSportEdit(key, el) {
+  const idx = editSports.indexOf(key)
+  if (idx === -1) {
+    editSports.push(key)
+    el.classList.add('active')
+  } else {
+    editSports.splice(idx, 1)
+    el.classList.remove('active')
+  }
+}
+
+async function saveSports() {
+  if (!currentUser) return
+  const btn = document.querySelector('#sports-modal button[onclick="saveSports()"]')
+  const orig = btn.textContent
+  btn.textContent = 'กำลังบันทึก...'
+  btn.disabled = true
+
+  const { error } = await sb.from('profiles').update({ sports: editSports }).eq('id', currentUser.id)
+  btn.textContent = orig
+  btn.disabled = false
+
+  if (error) {
+    alert('บันทึกไม่สำเร็จ: ' + error.message)
+    return
+  }
+  userProfile = { ...userProfile, sports: editSports }
+  closeSportsEditor()
+
+  // Re-render exercise panel immediately
+  const exPanel = document.getElementById('tab-exercise')
+  if (exPanel && calcData) {
+    exPanel.innerHTML = generateWorkoutPlan(editSports, calcData.goal, calcData)
+  }
 }
 
 // ======= GENERATE FOOD PLAN (AI-powered, daily rotation) =======
