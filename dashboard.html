@@ -13,6 +13,7 @@
 [data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
 [data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+button,a,label[onclick],label[for]{touch-action:manipulation}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
@@ -26,13 +27,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 @keyframes loading{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
 
 /* TOPBAR */
-.topbar{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
-.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .topbar h1{font-family:var(--font-d);font-size:1.3em;letter-spacing:.05em;color:var(--accent)}
 .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:.78em;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0}
 .user-avatar img{width:100%;height:100%;object-fit:cover}
-.topbar-right{display:flex;align-items:center;gap:8px}
-.topbar-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:.72em;cursor:pointer;font-family:var(--font-b);white-space:nowrap;text-decoration:none}
+.topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+@media(max-width:360px){.topbar-btn{padding:6px 8px;font-size:.68em}}
+.topbar-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:.72em;cursor:pointer;font-family:var(--font-b);white-space:nowrap;text-decoration:none;touch-action:manipulation}
 .topbar-btn.primary{background:var(--accent);color:#080b10;border-color:var(--accent)}
 
 /* HERO */
@@ -79,7 +81,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .nav-wrap{padding:0 14px;margin-bottom:14px;position:sticky;top:53px;z-index:90}
 .nav-inner{background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r);padding:5px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .nav-inner::-webkit-scrollbar{display:none}
-.nav-btn{flex-shrink:0;padding:8px 16px;border-radius:20px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:clamp(.74em,.9vw+.5em,.84em);font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-btn{flex-shrink:0;padding:8px 16px;border-radius:20px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:clamp(.74em,.9vw+.5em,.84em);font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;touch-action:manipulation}
 .nav-btn.active{background:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.3)}
 
 /* PANEL */
@@ -107,7 +109,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .day-mins{font-size:.54em;color:var(--muted)}
 
 /* EX ROW */
-.ex-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;border-radius:8px}
+.ex-row{display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s;border-radius:8px;touch-action:manipulation}
 .ex-row:last-child{border-bottom:none}
 .ex-row:hover{background:rgba(255,255,255,.04)}
 .ex-thumb{width:44px;height:44px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.2em;flex-shrink:0}
@@ -185,12 +187,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .modal-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);position:relative}
 .modal-title{font-family:var(--font-d);font-size:1.6em;letter-spacing:.04em;margin-bottom:4px}
 .modal-sets{font-family:var(--font-m);font-size:.72em;color:var(--accent);margin-bottom:6px}
-.modal-close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-close{position:absolute;top:16px;right:18px;background:rgba(255,255,255,.08);border:none;color:var(--text);width:40px;height:40px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
 .muscle-section{padding:0 20px 14px}
 .muscle-section h4{font-size:.7em;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:var(--font-m);margin-bottom:8px}
 .muscle-diagram-row{display:flex;gap:12px;align-items:flex-start}
-.muscle-svg-wrap{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;justify-content:center}
-.muscle-labels{flex-shrink:0;width:120px}
+.muscle-svg-wrap{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px;display:flex;justify-content:center;min-width:0}
+.muscle-labels{flex-shrink:0;width:110px}
+@media(max-width:360px){.muscle-labels{width:90px}}
 .muscle-label-item{display:flex;align-items:center;gap:6px;margin-bottom:7px}
 .muscle-label-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
 .muscle-label-text strong{display:block;color:var(--text);font-size:.76em}
@@ -210,6 +213,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* DIARY RINGS */
 .diary-rings-wrap{display:flex;align-items:center;gap:16px;padding:4px 0 14px}
+@media(max-width:340px){.diary-rings-wrap{flex-direction:column;align-items:flex-start}}
 .diary-cal-ring{flex-shrink:0;position:relative;width:120px;height:120px}
 .diary-cal-ring svg{transform:rotate(-90deg)}
 .diary-cal-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
@@ -242,7 +246,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .avatar-large{width:88px;height:88px;border-radius:50%;background:var(--surface2);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:2em;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0;cursor:pointer;position:relative;transition:opacity .2s}
 .avatar-large:hover{opacity:.85}
 .avatar-large img{width:100%;height:100%;object-fit:cover}
-.profile-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.9em;outline:none;transition:border-color .2s}
+.profile-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:1em;outline:none;transition:border-color .2s}
 .profile-input:focus{border-color:rgba(45,212,191,.4)}
 .upload-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;transition:all .18s;margin-top:10px}
 .upload-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -1179,7 +1183,7 @@ async function saveProfile() {
     window._pendingAvatarFile = null
   }
 
-  const { error: dbErr } = await sb.from('profiles').update({ name: name || null, avatar_url: avatarUrl }).eq('id', currentUser.id)
+  const { error: dbErr } = await sb.from('profiles').upsert({ id: currentUser.id, name: name || null, avatar_url: avatarUrl }, { onConflict: 'id' })
   if (dbErr) {
     btn.textContent = orig
     btn.disabled = false
@@ -1723,7 +1727,7 @@ function buildDiaryHTML() {
     </button>`
   }
 
-  const inputStyle = 'width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.86em;outline:none;box-sizing:border-box'
+  const inputStyle = 'width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:1em;outline:none;box-sizing:border-box'
   const labelStyle = 'display:block;font-size:.62em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px'
 
   const calColor = pCal >= 100 ? 'var(--red)' : 'var(--accent4)'
@@ -1831,7 +1835,7 @@ function buildDiaryHTML() {
         <div><label style="${labelStyle}">แคลอรี่ (kcal)</label><input id="diary-cal" type="number" min="0" max="9999" step="1" placeholder="เช่น 450" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">เวลากิน</label><input id="diary-time" type="time" style="${inputStyle}" value="${new Date().toTimeString().slice(0,5)}"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:14px">
         <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
