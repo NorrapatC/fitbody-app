@@ -216,6 +216,18 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .sport-tag.active{border-color:var(--accent);background:rgba(45,212,191,.1);color:var(--accent)}
 .sports-current-tag{display:inline-flex;align-items:center;gap:4px;font-size:.72em;padding:4px 10px;border-radius:12px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:var(--accent);font-family:var(--font-b);margin:2px}
 
+/* PROFILE EDITOR MODAL */
+#profile-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:1100;display:none;align-items:flex-end;justify-content:center}
+#profile-modal.open{display:flex;animation:fadeOverlay .2s ease}
+.profile-sheet{background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.2,1,.3,1);padding-bottom:env(safe-area-inset-bottom,20px)}
+.avatar-large{width:88px;height:88px;border-radius:50%;background:var(--surface2);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:2em;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0;cursor:pointer;position:relative;transition:opacity .2s}
+.avatar-large:hover{opacity:.85}
+.avatar-large img{width:100%;height:100%;object-fit:cover}
+.profile-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.9em;outline:none;transition:border-color .2s}
+.profile-input:focus{border-color:rgba(45,212,191,.4)}
+.upload-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;transition:all .18s;margin-top:10px}
+.upload-btn:hover{border-color:var(--accent);color:var(--accent)}
+
 /* PROGRESS TOAST */
 #progress-toast{position:fixed;bottom:0;left:0;right:0;z-index:500;padding:0 14px 14px;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,1,.3,1);pointer-events:none}
 #progress-toast.open{transform:translateY(0);pointer-events:all}
@@ -250,7 +262,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <!-- TOPBAR -->
 <div class="topbar" id="topbar" style="display:none">
   <div class="topbar-left">
-    <div class="user-avatar" id="user-avatar">?</div>
+    <div class="user-avatar" id="user-avatar" onclick="openProfileEditor()" style="cursor:pointer" title="แก้ไขโปรไฟล์">?</div>
     <h1>FITBODY</h1>
   </div>
   <div class="topbar-right">
@@ -321,6 +333,37 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     </div>
     <div class="modal-instructions"><h4>วิธีทำ</h4><div id="m-steps"></div></div>
     <div class="modal-tip" id="m-tip"></div>
+  </div>
+</div>
+
+<!-- PROFILE EDITOR BOTTOM SHEET -->
+<div id="profile-modal" onclick="closeProfileEditorOutside(event)">
+  <div class="profile-sheet">
+    <div class="modal-drag"></div>
+    <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:var(--font-d);font-size:1.5em;letter-spacing:.04em">โปรไฟล์</div>
+      <button onclick="closeProfileEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="padding:20px 20px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+      <div class="avatar-large" id="profile-avatar-preview" onclick="document.getElementById('avatar-file-input').click()">?</div>
+      <button class="upload-btn" onclick="document.getElementById('avatar-file-input').click()">📷 เปลี่ยนรูปโปรไฟล์</button>
+      <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarUpload(this)">
+      <div id="avatar-upload-status" style="font-size:.66em;color:var(--muted);font-family:var(--font-m);min-height:16px"></div>
+    </div>
+    <div style="padding:16px 20px">
+      <div style="margin-bottom:14px">
+        <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">ชื่อที่แสดง</div>
+        <input type="text" id="profile-name-input" class="profile-input" placeholder="ชื่อของคุณ" maxlength="60">
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Email</div>
+        <div id="profile-email-display" style="font-size:.82em;color:var(--muted);font-family:var(--font-m);padding:10px 0"></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="closeProfileEditor()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.82em;cursor:pointer">ยกเลิก</button>
+        <button onclick="saveProfile()" id="save-profile-btn" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -921,6 +964,124 @@ function switchDayTab(day, clickedEl) {
     clickedEl.style.border = '2px solid var(--accent)'
     clickedEl.style.background = 'rgba(45,212,191,.07)'
   }
+}
+
+// ======= PROFILE EDITOR =======
+function openProfileEditor() {
+  const avatarUrl = userProfile?.avatar_url || (currentUser?.user_metadata?.avatar_url && /^https?:\/\//.test(currentUser.user_metadata.avatar_url) ? currentUser.user_metadata.avatar_url : null)
+  const preview = document.getElementById('profile-avatar-preview')
+  if (avatarUrl) {
+    const img = document.createElement('img')
+    img.src = avatarUrl
+    img.alt = 'avatar'
+    preview.textContent = ''
+    preview.appendChild(img)
+  } else {
+    preview.textContent = (userProfile?.name || currentUser?.user_metadata?.full_name || currentUser?.email || '?')[0].toUpperCase()
+  }
+  document.getElementById('profile-name-input').value = userProfile?.name || currentUser?.user_metadata?.full_name || ''
+  document.getElementById('profile-email-display').textContent = currentUser?.email || ''
+  document.getElementById('avatar-upload-status').textContent = ''
+  window._pendingAvatarFile = null
+  document.getElementById('profile-modal').classList.add('open')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeProfileEditor() {
+  document.getElementById('profile-modal').classList.remove('open')
+  document.body.style.overflow = ''
+}
+
+function closeProfileEditorOutside(e) {
+  if (e.target === document.getElementById('profile-modal')) closeProfileEditor()
+}
+
+function handleAvatarUpload(input) {
+  const file = input.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    document.getElementById('avatar-upload-status').textContent = '⚠️ กรุณาเลือกไฟล์รูปภาพเท่านั้น'
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    document.getElementById('avatar-upload-status').textContent = '⚠️ ไฟล์ใหญ่เกินไป (สูงสุด 5MB)'
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const preview = document.getElementById('profile-avatar-preview')
+    const img = document.createElement('img')
+    img.src = e.target.result
+    img.alt = 'preview'
+    preview.textContent = ''
+    preview.appendChild(img)
+  }
+  reader.readAsDataURL(file)
+  window._pendingAvatarFile = file
+  document.getElementById('avatar-upload-status').textContent = '✓ เลือกรูปแล้ว — กด บันทึก เพื่ออัปโหลด'
+}
+
+async function saveProfile() {
+  if (!currentUser) return
+  const btn = document.getElementById('save-profile-btn')
+  const orig = btn.textContent
+  btn.textContent = 'กำลังบันทึก...'
+  btn.disabled = true
+
+  const name = document.getElementById('profile-name-input').value.trim().slice(0, 60)
+  let avatarUrl = userProfile?.avatar_url || null
+
+  if (window._pendingAvatarFile) {
+    const file = window._pendingAvatarFile
+    const ext = file.type === 'image/png' ? 'png' : 'jpg'
+    const path = `${currentUser.id}/avatar.${ext}`
+    const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true, contentType: file.type })
+    if (upErr) {
+      btn.textContent = orig
+      btn.disabled = false
+      document.getElementById('avatar-upload-status').textContent = '⚠️ อัปโหลดรูปไม่สำเร็จ: ' + upErr.message
+      return
+    }
+    const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path)
+    avatarUrl = publicUrl + '?t=' + Date.now()
+    window._pendingAvatarFile = null
+  }
+
+  const { error: dbErr } = await sb.from('profiles').update({ name: name || null, avatar_url: avatarUrl }).eq('id', currentUser.id)
+  if (dbErr) {
+    btn.textContent = orig
+    btn.disabled = false
+    document.getElementById('avatar-upload-status').textContent = '⚠️ บันทึกไม่สำเร็จ: ' + dbErr.message
+    return
+  }
+
+  await sb.auth.updateUser({ data: { full_name: name, avatar_url: avatarUrl } })
+  userProfile = { ...userProfile, name, avatar_url: avatarUrl }
+
+  // Update topbar avatar
+  const avatarEl = document.getElementById('user-avatar')
+  if (avatarUrl) {
+    const img = document.createElement('img')
+    img.src = avatarUrl
+    img.alt = 'avatar'
+    avatarEl.textContent = ''
+    avatarEl.appendChild(img)
+  } else {
+    avatarEl.textContent = (name || currentUser.email || '?')[0].toUpperCase()
+  }
+
+  // Update greeting name
+  if (name) {
+    const nameEl = document.getElementById('user-name')
+    const nameSpan = document.createElement('span')
+    nameSpan.textContent = name.split(' ')[0].toUpperCase()
+    nameEl.textContent = ''
+    nameEl.appendChild(nameSpan)
+  }
+
+  btn.textContent = orig
+  btn.disabled = false
+  closeProfileEditor()
 }
 
 // ======= SPORTS EDITOR =======
@@ -1751,7 +1912,7 @@ async function init() {
   // Load from Supabase — specific columns only (not select *)
   document.getElementById('loading-msg').textContent = 'กำลังโหลดข้อมูลของคุณ...'
   const [profileRes, recordsRes] = await Promise.all([
-    sb.from('profiles').select('name,age,height_cm,gender,goal,activity_level,sports').eq('id', currentUser.id).single(),
+    sb.from('profiles').select('name,age,height_cm,gender,goal,activity_level,sports,avatar_url').eq('id', currentUser.id).single(),
     sb.from('inbody_records').select('id,recorded_at,weight_kg,body_fat_pct,muscle_kg,fat_kg,bmi,visceral_fat,inbody_score,input_method').eq('user_id', currentUser.id).order('recorded_at', {ascending: false})
   ])
 
@@ -1764,6 +1925,17 @@ async function init() {
 
   userProfile = profileRes.data || {}
   const latestRec = recordsRes.data?.[0]
+
+  // If profile has a stored avatar_url, prefer it over user_metadata (covers manual uploads)
+  const storedAvatarUrl = profileRes.data?.avatar_url
+  if (storedAvatarUrl && /^https?:\/\//.test(storedAvatarUrl)) {
+    const avatarEl = document.getElementById('user-avatar')
+    const img = document.createElement('img')
+    img.src = storedAvatarUrl
+    img.alt = 'avatar'
+    avatarEl.textContent = ''
+    avatarEl.appendChild(img)
+  }
 
   // Show topbar + hero — use textContent to prevent XSS
   const rawName = currentUser.user_metadata?.full_name || profileRes.data?.name || currentUser.email?.split('@')[0] || 'User'

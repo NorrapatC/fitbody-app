@@ -148,9 +148,46 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <label class="form-label">Password</label>
         <input type="password" class="form-input" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginWithEmail()">
       </div>
+      <div style="text-align:right;margin-top:-8px;margin-bottom:16px">
+        <button type="button" onclick="switchTab('forgot',null)" style="background:none;border:none;color:var(--muted);font-family:var(--font-m);font-size:.7em;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px">ลืม Password?</button>
+      </div>
       <button class="btn btn-primary" id="login-btn" onclick="loginWithEmail()">
         เข้าสู่ระบบ
       </button>
+    </div>
+
+    <!-- FORGOT PASSWORD FORM -->
+    <div id="forgot-form" style="display:none">
+      <button type="button" onclick="switchTab('login',null)" style="background:none;border:none;color:var(--muted);font-family:var(--font-m);font-size:.72em;cursor:pointer;padding:0;margin-bottom:18px;display:flex;align-items:center;gap:6px">← กลับสู่หน้า Login</button>
+      <div style="margin-bottom:20px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4em;letter-spacing:.06em;color:var(--accent);margin-bottom:4px">RESET PASSWORD</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.65em;color:var(--muted)">ระบุ Email ที่ใช้สมัคร เราจะส่งลิงก์รีเซ็ตให้ทันที</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="forgot-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendResetEmail()">
+      </div>
+      <button class="btn btn-primary" id="forgot-btn" onclick="sendResetEmail()">ส่งลิงก์รีเซ็ต Password</button>
+    </div>
+
+    <!-- SET NEW PASSWORD FORM (shown after clicking reset email link) -->
+    <div id="reset-form" style="display:none">
+      <div style="margin-bottom:20px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4em;letter-spacing:.06em;color:var(--accent);margin-bottom:4px">ตั้ง PASSWORD ใหม่</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.65em;color:var(--muted)">กรอก Password ใหม่ที่ต้องการใช้</div>
+      </div>
+      <div class="form-group" style="position:relative">
+        <label class="form-label">Password ใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
+        <input type="password" class="form-input" id="reset-password" placeholder="••••••••" style="padding-right:42px" oninput="checkResetPasswordStrength(this.value)">
+        <button type="button" onclick="toggleResetPwVis()" style="position:absolute;right:12px;bottom:11px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:2px">👁</button>
+      </div>
+      <div id="reset-pw-strength-wrap" style="margin-top:-10px;margin-bottom:14px;display:none">
+        <div style="height:3px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:4px">
+          <div id="reset-pw-strength-bar" style="height:100%;border-radius:3px;transition:all .3s;width:0"></div>
+        </div>
+        <div id="reset-pw-strength-label" style="font-family:'DM Mono',monospace;font-size:.62em;color:var(--muted)"></div>
+      </div>
+      <button class="btn btn-primary" id="reset-btn" onclick="setNewPassword()">บันทึก Password ใหม่</button>
     </div>
 
     <!-- REGISTER FORM -->
@@ -209,19 +246,33 @@ async function checkSession() {
   document.getElementById('main-container').style.display = 'block'
 }
 
-// Handle Google OAuth redirect
+let isRecoveryMode = false
+
+// Handle Google OAuth redirect + password recovery
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+  if (event === 'PASSWORD_RECOVERY') {
+    isRecoveryMode = true
+    document.getElementById('loading-screen').style.display = 'none'
+    document.getElementById('main-container').style.display = 'block'
+    switchTab('reset', null)
+  } else if (event === 'SIGNED_IN' && session && !isRecoveryMode) {
     window.location.href = 'dashboard.html'
   }
 })
 
-// Switch Login/Register tabs
+// Switch Login/Register/Forgot/Reset tabs
 function switchTab(tab, el) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
-  el.classList.add('active')
+  if (el) el.classList.add('active')
+  const tabs = document.querySelectorAll('.tab-btn')
+  if (tab === 'login') tabs[0]?.classList.add('active')
+  if (tab === 'register') tabs[1]?.classList.add('active')
   document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none'
   document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none'
+  document.getElementById('forgot-form').style.display = tab === 'forgot' ? 'block' : 'none'
+  document.getElementById('reset-form').style.display = tab === 'reset' ? 'block' : 'none'
+  // Hide tabs bar when showing forgot/reset
+  document.querySelector('.tabs').style.display = (tab === 'forgot' || tab === 'reset') ? 'none' : 'flex'
   hideAlert()
 }
 
@@ -297,10 +348,84 @@ async function registerWithEmail() {
   }
 }
 
+// Forgot Password
+async function sendResetEmail() {
+  const email = document.getElementById('forgot-email').value.trim()
+  if (!email) { showAlert('กรุณากรอก Email'); return }
+  const btn = document.getElementById('forgot-btn')
+  btn.innerHTML = '<span class="spinner"></span>กำลังส่ง...'
+  btn.disabled = true
+  hideAlert()
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: REDIRECT_URL + '/index.html'
+  })
+  if (error) {
+    showAlert('เกิดข้อผิดพลาด: ' + error.message)
+    btn.innerHTML = 'ส่งลิงก์รีเซ็ต Password'
+    btn.disabled = false
+  } else {
+    document.getElementById('forgot-form').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:3em;margin-bottom:16px">📧</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8em;letter-spacing:.06em;color:var(--accent3);margin-bottom:8px">เช็ค EMAIL เลย</div>
+        <div style="font-size:.8em;color:var(--muted);line-height:1.8;margin-bottom:20px">ส่งลิงก์รีเซ็ตไปที่<br><span style="color:var(--text);font-family:'DM Mono',monospace">${email}</span><br>ลิงก์มีอายุ 1 ชั่วโมง</div>
+        <button type="button" onclick="switchTab('login',null)" style="padding:10px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.82em;cursor:pointer;font-family:var(--font-b)">กลับหน้า Login</button>
+      </div>`
+    document.querySelector('.tabs').style.display = 'none'
+  }
+}
+
+// Set New Password (after recovery link clicked)
+async function setNewPassword() {
+  const pw = document.getElementById('reset-password').value
+  if (!pw || pw.length < 6) { showAlert('Password ต้องมีอย่างน้อย 6 ตัวอักษร'); return }
+  const btn = document.getElementById('reset-btn')
+  btn.innerHTML = '<span class="spinner"></span>กำลังบันทึก...'
+  btn.disabled = true
+  hideAlert()
+  const { error } = await sb.auth.updateUser({ password: pw })
+  if (error) {
+    showAlert('เกิดข้อผิดพลาด: ' + error.message)
+    btn.innerHTML = 'บันทึก Password ใหม่'
+    btn.disabled = false
+  } else {
+    showAlert('เปลี่ยน Password สำเร็จ! กำลังพาเข้าสู่ระบบ...', 'success')
+    isRecoveryMode = false
+    setTimeout(() => { window.location.href = 'dashboard.html' }, 1500)
+  }
+}
+
 // Password visibility toggle
 function togglePwVisibility() {
   const inp = document.getElementById('reg-password')
   inp.type = inp.type === 'password' ? 'text' : 'password'
+}
+
+function toggleResetPwVis() {
+  const inp = document.getElementById('reset-password')
+  inp.type = inp.type === 'password' ? 'text' : 'password'
+}
+
+function checkResetPasswordStrength(val) {
+  const wrap = document.getElementById('reset-pw-strength-wrap')
+  const bar = document.getElementById('reset-pw-strength-bar')
+  const label = document.getElementById('reset-pw-strength-label')
+  if (!val) { wrap.style.display = 'none'; return }
+  wrap.style.display = 'block'
+  let score = 0
+  if (val.length >= 6) score++
+  if (val.length >= 10) score++
+  if (/[0-9]/.test(val) && /[a-zA-Z]/.test(val)) score++
+  const levels = [
+    { width: '33%', color: '#f87171', text: 'อ่อนมาก' },
+    { width: '66%', color: '#2dd4bf', text: 'ปานกลาง' },
+    { width: '100%', color: '#4ade80', text: '✓ ดี' },
+  ]
+  const lv = levels[Math.min(score, 2)]
+  bar.style.width = lv.width
+  bar.style.background = lv.color
+  label.textContent = lv.text
+  label.style.color = lv.color
 }
 
 // Password strength indicator
