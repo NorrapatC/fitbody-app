@@ -108,9 +108,40 @@ select.form-input option{background:var(--surface2);color:var(--text)}
 .section-sub{font-size:.76em;color:var(--muted);margin-top:-12px;margin-bottom:16px}
 
 .ai-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:20px;padding:3px 10px;font-size:.65em;color:var(--accent3);font-family:var(--font-m);margin-left:8px}
+
+/* PROGRESS TOAST */
+#progress-toast{position:fixed;bottom:0;left:0;right:0;z-index:500;padding:0 14px 14px;transform:translateY(110%);transition:transform .3s cubic-bezier(.2,1,.3,1);pointer-events:none}
+#progress-toast.open{transform:translateY(0);pointer-events:all}
+.progress-inner{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 -4px 40px rgba(0,0,0,.6)}
+.prog-steps-row{display:flex;align-items:flex-start;gap:0;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.prog-steps-row::-webkit-scrollbar{display:none}
+.prog-step{display:flex;align-items:center;flex-shrink:0}
+.prog-step-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.prog-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;font-family:var(--font-m);border:2px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .3s}
+.prog-step.done .prog-step-dot{background:var(--accent3);border-color:var(--accent3);color:#080b10}
+.prog-step.active .prog-step-dot{background:var(--accent);border-color:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.4)}
+.prog-step-line{width:24px;height:2px;background:var(--border);flex-shrink:0;transition:background .3s;margin-top:-10px}
+.prog-step.done ~ .prog-step .prog-step-line,.prog-step.done .prog-step-line{background:var(--accent3)}
+.prog-step-label{font-size:.58em;color:var(--muted);font-family:var(--font-m);margin-top:3px;text-align:center;white-space:nowrap}
+.prog-step.active .prog-step-label{color:var(--accent)}
+.prog-step.done .prog-step-label{color:var(--accent3)}
+.prog-track-bar{height:3px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.prog-track-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:10px;transition:width .5s ease}
+.prog-status-text{font-size:.66em;color:var(--muted);font-family:var(--font-m);display:flex;align-items:center;gap:6px}
+.prog-spinner{width:10px;height:10px;border:2px solid rgba(45,212,191,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+
+<!-- PROGRESS TOAST -->
+<div id="progress-toast">
+  <div class="progress-inner">
+    <div class="prog-steps-row" id="prog-steps-row"></div>
+    <div class="prog-track-bar"><div class="prog-track-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-status-text"><div class="prog-spinner" id="prog-spinner"></div><span id="prog-status-text">กำลังประมวลผล...</span></div>
+  </div>
+</div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -382,9 +413,13 @@ async function analyzeWithGemini(base64Data) {
   dotEl.className = 'ai-dot loading'
   textEl.textContent = 'AI กำลังอ่านข้อมูลจากรูป InBody...'
 
+  showProgress(ANALYZE_STEPS, 0, 'กำลังส่งรูปไปวิเคราะห์...')
+
   try {
     const mimeType = uploadedFile?.type || 'image/jpeg'
     const { data: { session } } = await sb.auth.getSession()
+
+    updateProgress(ANALYZE_STEPS, 1, '🤖 AI กำลังอ่านผล InBody...')
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-inbody`, {
       method: 'POST',
@@ -403,11 +438,15 @@ async function analyzeWithGemini(base64Data) {
     const parsed = await response.json()
     fillFormFromAI(parsed)
 
+    updateProgress(ANALYZE_STEPS, 2, '✅ อ่านข้อมูลสำเร็จ!')
+    hideProgress(2000)
+
     dotEl.className = 'ai-dot done'
     textEl.textContent = '✅ อ่านข้อมูลสำเร็จ! ตรวจสอบและแก้ไขได้เลย'
     document.getElementById('next-btn-1').style.display = 'block'
 
   } catch (err) {
+    hideProgress(500)
     dotEl.className = 'ai-dot error'
     textEl.textContent = '⚠️ อ่านไม่สำเร็จ กรุณากรอกข้อมูลเอง'
     document.getElementById('next-btn-1').style.display = 'block'
@@ -625,12 +664,16 @@ async function saveAndGo() {
   btn.innerHTML = '<span class="spinner"></span>กำลังบันทึก...'
   btn.disabled = true
 
+  showProgress(SAVE_STEPS, 0, 'กำลังยืนยันตัวตน...')
+
   try {
     // Re-verify session before saving
     const { data: { user } } = await sb.auth.getUser()
     if (!user) { window.location.href = 'index.html'; return }
 
     const r = calcResult
+
+    updateProgress(SAVE_STEPS, 1, 'กำลังบันทึกโปรไฟล์...')
 
     await sb.from('profiles').upsert({
       id: user.id,
@@ -642,6 +685,8 @@ async function saveAndGo() {
       sports: selectedSports,
       updated_at: new Date().toISOString()
     })
+
+    updateProgress(SAVE_STEPS, 2, 'กำลังบันทึกข้อมูล InBody...')
 
     const record = {
       user_id: user.id,
@@ -668,15 +713,70 @@ async function saveAndGo() {
 
     await sb.from('inbody_records').insert(record)
     localStorage.setItem('calc_result', JSON.stringify({ ...r, sports: selectedSports }))
-    window.location.href = 'dashboard.html'
+
+    updateProgress(SAVE_STEPS, 3, '✅ บันทึกสำเร็จ! กำลังไปดูแผน...')
+    setTimeout(() => { window.location.href = 'dashboard.html' }, 800)
 
   } catch (err) {
+    hideProgress(300)
     const alertEl = document.getElementById('save-alert')
     alertEl.textContent = 'เกิดข้อผิดพลาด: ' + err.message
     alertEl.className = 'alert error show'
     btn.innerHTML = '💾 บันทึกและดูแผน'
     btn.disabled = false
   }
+}
+
+// ======= PROGRESS TOAST =======
+const ANALYZE_STEPS = [
+  {icon:'📸', label:'อัปโหลดรูป'},
+  {icon:'🤖', label:'AI อ่านข้อมูล'},
+  {icon:'✅', label:'เสร็จสิ้น'},
+]
+const SAVE_STEPS = [
+  {icon:'👤', label:'ยืนยันตัวตน'},
+  {icon:'📋', label:'บันทึกโปรไฟล์'},
+  {icon:'📊', label:'บันทึก InBody'},
+  {icon:'✅', label:'เสร็จสิ้น'},
+]
+
+function _renderProgressSteps(steps, currentStep) {
+  const stepsRow = document.getElementById('prog-steps-row')
+  stepsRow.innerHTML = steps.map((s, i) => {
+    const isDone = i < currentStep
+    const isActive = i === currentStep
+    const cls = isDone ? 'done' : isActive ? 'active' : ''
+    const lineHtml = i < steps.length - 1
+      ? `<div class="prog-step-line"></div>`
+      : ''
+    return `<div class="prog-step ${cls}">
+      <div class="prog-step-wrap">
+        <div class="prog-step-dot">${isDone ? '✓' : s.icon}</div>
+        <div class="prog-step-label">${s.label}</div>
+      </div>
+      ${lineHtml}
+    </div>`
+  }).join('')
+  const pct = steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0
+  document.getElementById('prog-fill').style.width = pct + '%'
+  document.getElementById('prog-spinner').style.display = currentStep < steps.length - 1 ? 'block' : 'none'
+}
+
+function showProgress(steps, currentStep, statusText) {
+  _renderProgressSteps(steps, currentStep)
+  document.getElementById('prog-status-text').textContent = statusText || steps[currentStep]?.label || 'กำลังประมวลผล...'
+  document.getElementById('progress-toast').classList.add('open')
+}
+
+function updateProgress(steps, currentStep, statusText) {
+  _renderProgressSteps(steps, currentStep)
+  if (statusText) document.getElementById('prog-status-text').textContent = statusText
+}
+
+function hideProgress(delay = 2000) {
+  setTimeout(() => {
+    document.getElementById('progress-toast').classList.remove('open')
+  }, delay)
 }
 
 // UTILS

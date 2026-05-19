@@ -207,6 +207,28 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
 .footer{text-align:center;padding:16px;font-family:var(--font-m);font-size:.58em;color:var(--muted)}
+
+/* PROGRESS TOAST */
+#progress-toast{position:fixed;bottom:0;left:0;right:0;z-index:500;padding:0 14px 14px;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,1,.3,1);pointer-events:none}
+#progress-toast.open{transform:translateY(0);pointer-events:all}
+.progress-inner{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 -4px 40px rgba(0,0,0,.6)}
+.progress-steps{display:flex;align-items:center;gap:0;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.progress-steps::-webkit-scrollbar{display:none}
+.prog-step{display:flex;align-items:center;flex-shrink:0}
+.prog-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;font-family:var(--font-m);border:2px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .3s;flex-shrink:0}
+.prog-step.done .prog-step-dot{background:var(--accent3);border-color:var(--accent3);color:#080b10}
+.prog-step.active .prog-step-dot{background:var(--accent);border-color:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.4)}
+.prog-step-line{width:20px;height:2px;background:var(--border);flex-shrink:0;transition:background .3s}
+.prog-step.done + .prog-step .prog-step-line,.prog-step.done .prog-step-line{background:var(--accent3)}
+.prog-step-label{font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-top:3px;text-align:center;white-space:nowrap}
+.prog-step.active .prog-step-label{color:var(--accent)}
+.prog-step.done .prog-step-label{color:var(--accent3)}
+.prog-step-wrap{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.prog-track-bar{height:3px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-bottom:8px}
+.prog-track-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:10px;transition:width .5s ease}
+.prog-status-text{font-size:.66em;color:var(--muted);font-family:var(--font-m);display:flex;align-items:center;gap:6px}
+.prog-spinner{width:10px;height:10px;border:2px solid rgba(45,212,191,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -264,6 +286,15 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   <div id="panels-container"></div>
 </div>
 
+<!-- PROGRESS TOAST -->
+<div id="progress-toast">
+  <div class="progress-inner">
+    <div class="progress-steps" id="prog-steps-row"></div>
+    <div class="prog-track-bar"><div class="prog-track-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-status-text"><div class="prog-spinner" id="prog-spinner"></div><span id="prog-status-text">กำลังประมวลผล...</span></div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
   <div class="modal" id="modal-inner">
@@ -291,20 +322,79 @@ const { createClient } = supabase
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
 
-// ======= EXERCISE DATABASE (same as v3) =======
+// ======= EXERCISE DATABASE =======
 const EXERCISES = {
-  benchpress:{name:"Bench Press",sets:"4×8–10",muscles:["chest","shoulder","tricep"],ytId:"rT7DgCr-3pg",primary:["chest"],secondary:["shoulder","tricep"],steps:["นอนบนม้านั่ง หลังแนบ เท้าวางพื้น","จับบาร์กว้างกว่าไหล่เล็กน้อย","ลดบาร์ลงแตะอก ข้อศอกทำมุม 45–75°","ดันขึ้นจนแขนเหยียดเกือบสุด","หายใจออกตอนดันขึ้น หายใจเข้าตอนลง"],tip:"💡 หมุนสะบักชิดกัน กดลงกับม้านั่งตลอด ป้องกันไหล่บาดเจ็บ"},
-  pullup:{name:"Pull-up",sets:"4×6–10",muscles:["back","arm"],ytId:"eGo4IYlbE5g",primary:["back"],secondary:["arm"],steps:["จับบาร์กว้างกว่าไหล่ หันฝ่ามือออก","ห้อยตัวแขนเหยียด ไหล่ลงต่ำ","ดึงตัวขึ้นบีบสะบักเข้าหากัน","ขึ้นจนคางพ้นบาร์","ลดลงช้า ๆ จนแขนเหยียดสุด"],tip:"💡 ถ้าทำไม่ได้ ใช้ Resistance Band หรือ Lat Pulldown แทน"},
-  squat:{name:"Back Squat",sets:"4×8–10",muscles:["leg","glute"],ytId:"ultWZbUMPL8",primary:["leg"],secondary:["glute"],steps:["วาง Barbell บนกล้ามเนื้อ Trap","ยืนกว้างเท่าไหล่ เท้าหันออก 30–45°","ลงช้า ๆ 2–3 วิ เข่าตามแนวนิ้วเท้า","ลงต่ำกว่าขนานพื้น","ดันพื้นขึ้น บีบ Glute ตรงบนสุด"],tip:"💡 เข่าอย่าพับเข้าใน ถ้าเข่าพับเข้าให้ลด Weight ลง"},
-  rdl:{name:"Romanian Deadlift",sets:"4×10",muscles:["leg","glute"],ytId:"JCXUYuzwNrM",primary:["leg"],secondary:["glute"],steps:["ยืนตรง จับบาร์ระดับสะโพก","โน้มตัวไปข้างหน้า สะโพกยื่นไปข้างหลัง","หลังตรงตลอด (Neutral Spine)","ลงจนรู้สึก Hamstring ตึง","ดันสะโพกไปข้างหน้ายืนตรง"],tip:"💡 RDL ต่างจาก Deadlift — เข่าเกือบตึง โน้มตัวด้วยสะโพก"},
-  hipthrust:{name:"Hip Thrust",sets:"4×15",muscles:["glute","leg"],ytId:"xDmFkJxPzeM",primary:["glute"],secondary:["leg"],steps:["หลังพักบนม้านั่ง วาง Barbell บนสะโพก","เท้าวางพื้นห่างกำลังพอดี","ดันสะโพกขึ้นสูงสุด บีบ Glute แรง ค้าง 1 วิ","ลดลงช้า ๆ ไม่แตะพื้น"],tip:"💡 Hip Thrust คือ King of Glute Exercises"},
-  burpee:{name:"Burpee",sets:"40วิ/20วิ×4รอบ",muscles:["full"],ytId:"JZQA08SlJnM",primary:["full"],secondary:[],steps:["ยืนตรง กระโดดลงสควอท","วางมือพื้น กระโดดขาออกท่า Push-up","ทำ Push-up 1 ครั้ง","กระโดดขาเข้าหาอก","กระโดดขึ้นพร้อมยกมือเหนือหัว"],tip:"💡 เน้น consistency มากกว่า speed"},
-  mountainclimber:{name:"Mountain Climber",sets:"40วิ/20วิ×4",muscles:["core","leg"],ytId:"nmwgirgXLYM",primary:["core"],secondary:["leg"],steps:["เริ่มท่า Plank สูง แขนเหยียด","ดึงเข่าขวาเข้าหาอก","สลับเร็ว ดึงเข่าซ้าย","สะโพกไม่ขึ้นลง ลำตัวตรง"],tip:"💡 ยิ่งเร็วยิ่งเผาไขมันมาก สะโพกไม่ขึ้น"},
-  deadlift:{name:"Deadlift",sets:"4×5",muscles:["back","leg","glute"],ytId:"op9kVnSso6Q",primary:["back"],secondary:["leg","glute"],steps:["ยืนเท้ากว้างเท่าสะโพก บาร์อยู่เหนือ midfoot","งอสะโพก จับบาร์กว้างเท่าขา","หลังตรง อกชูขึ้น สะบักชิด","ดันพื้นยกบาร์ขึ้น สะโพกและไหล่ขึ้นพร้อมกัน","บีบ Glute ตรงบนสุด"],tip:"💡 Deadlift สำคัญที่สุดสำหรับ Hyrox"},
-  kbswing:{name:"KB Swing",sets:"4×15",muscles:["glute","leg","back"],ytId:"sSESeQAir2w",primary:["glute"],secondary:["back"],steps:["ยืนกว้างเท่าไหล่ KB อยู่หน้าเท้า","งอสะโพกจับ KB แกว่งไปข้างหลัง","ดันสะโพกไปข้างหน้าอย่างระเบิด","KB แกว่งขึ้นระดับหน้าอก","ลงกลับแกว่งไปข้างหลัง"],tip:"💡 Hip Swing ไม่ใช่ Squat — สะโพกคือ Motor"},
-  wallball:{name:"Wall Ball",sets:"3×20",muscles:["leg","shoulder","core"],ytId:"fp_4nMJQMJs",primary:["leg"],secondary:["shoulder","core"],steps:["ถือ Med Ball ระดับอก ยืนห่างกำแพง 60cm","ลงสควอทต่ำกว่าขนาน","ลุกขึ้นระเบิด ส่ง Ball ขึ้นกำแพง 3m","รับบอลกลับด้วย Squat ต่อเนื่อง"],tip:"💡 Wall Ball = Squat + Push ต้องฝึก Front Squat ก่อน"},
-  shadowfootwork:{name:"Shadow Footwork",sets:"3×60วิ",muscles:["leg","calf"],ytId:"eSxMzVJzRFk",primary:["leg"],secondary:["calf"],steps:["ยืนตรงกลางสนามท่า Ready Position","วิ่งไปมุมสนาม 6 มุม","แตะพื้นด้วยเท้าหน้า วิ่งกลับกลาง","ใช้ Split Step ทุกครั้งที่ออกตัว"],tip:"💡 Shadow Footwork คือ Drill ที่ดีที่สุดสำหรับ Footwork"},
-  zone2run:{name:"Zone 2 Run",sets:"30 นาที",muscles:["leg","calf"],ytId:"aV2mJFnmSsM",primary:["leg"],secondary:["calf"],steps:["วอร์มอัพเดิน 3–5 นาที","วิ่งเหยาะ ๆ พูดได้แต่ไม่สบาย","ตรวจ HR ให้อยู่ 115–136 bpm","Cool down เดิน 3–5 นาที"],tip:"💡 Zone 2 คือ Fat Oxidation Zone สูงสุด"},
+  // ===== WEIGHT TRAINING — PUSH =====
+  benchpress:{name:"Bench Press",sets:"4×8–10",muscles:["chest","shoulder","tricep"],primary:["chest"],secondary:["shoulder","tricep"],steps:["นอนบนม้านั่ง หลังแนบ เท้าวางพื้น","จับบาร์กว้างกว่าไหล่เล็กน้อย","ลดบาร์ลงแตะอก ข้อศอกทำมุม 45–75°","ดันขึ้นจนแขนเหยียดเกือบสุด","หายใจออกตอนดันขึ้น หายใจเข้าตอนลง"],tip:"💡 หมุนสะบักชิดกัน กดลงกับม้านั่งตลอด ป้องกันไหล่บาดเจ็บ"},
+  incline_db_press:{name:"Incline DB Press",sets:"3×10–12",muscles:["chest","shoulder"],primary:["chest"],secondary:["shoulder"],steps:["ตั้งม้านั่ง 30–45° จับ Dumbbell สองข้าง","ดันขึ้นตรงเหนืออก ข้อมือตรง","ลดลงช้า ข้อศอกกว้างกว่าไหล่เล็กน้อย","รู้สึกตึงบน Chest ขณะลดลง"],tip:"💡 Incline เน้น Upper Chest ให้อกดูมี shape ขึ้น"},
+  overhead_press:{name:"Overhead Press",sets:"4×8–10",muscles:["shoulder","tricep"],primary:["shoulder"],secondary:["tricep"],steps:["ยืนหรือนั่ง จับบาร์ระดับไหล่","ดันขึ้นตรงเหนือหัว หัวเอียงออกเล็กน้อย","ข้อศอกไม่ Flare เกินไป","ลดลงช้าๆ กลับตำแหน่งตั้งต้น"],tip:"💡 Core แน่นตลอด อย่าโก่งหลัง"},
+  lateral_raise:{name:"Lateral Raise",sets:"3×15–20",muscles:["shoulder"],primary:["shoulder"],secondary:[],steps:["ยืนตรง จับ Dumbbell สองข้าง","ยกแขนออกด้านข้างจนขนานพื้น","ข้อศอกงอเล็กน้อย ไม่ Shrug ไหล่","ลดลงช้า ควบคุม Negative"],tip:"💡 ยกถึงระดับไหล่เท่านั้น ยิ่งสูงกว่ายิ่งบาดเจ็บ"},
+  tricep_pushdown:{name:"Tricep Pushdown",sets:"3×12–15",muscles:["tricep"],primary:["tricep"],secondary:[],steps:["ยืนหน้า Cable Machine จับ Bar หรือ Rope","ข้อศอกชิดลำตัว ดันลงจนแขนเหยียด","บีบ Tricep ตรงล่าง ค้าง 1 วิ","ปล่อยขึ้นช้า ข้อศอกไม่แยกออก"],tip:"💡 ข้อศอกต้องอยู่กับที่ตลอด — Tricep เท่านั้นที่ทำงาน"},
+  chest_fly:{name:"Cable Fly / Pec Deck",sets:"3×12–15",muscles:["chest"],primary:["chest"],secondary:[],steps:["ตั้ง Cable สูง ยืนกลางเครื่อง","กางแขนออก ข้อศอกงอเล็กน้อย","ดึงสองข้างมาชนกันหน้าอก","เปิดออกช้า รู้สึก Stretch ที่ Chest"],tip:"💡 Fly คือ Isolation — ให้ Chest ทำงาน ไม่ใช่แขน"},
+  dips:{name:"Dips",sets:"3×10–15",muscles:["chest","tricep"],primary:["chest"],secondary:["tricep"],steps:["จับ Parallel Bars ลำตัวตั้งตรง","ลดตัวลงช้า ข้อศอกงอ 90°","โน้มตัวหน้า Chest จะทำงานมากขึ้น","ดันขึ้นจนแขนเกือบเหยียด"],tip:"💡 ถ้าทำยากเกินให้ใช้ Assisted Dips Machine"},
+
+  // ===== WEIGHT TRAINING — PULL =====
+  pullup:{name:"Pull-up",sets:"4×6–10",muscles:["back","arm"],primary:["back"],secondary:["arm"],steps:["จับบาร์กว้างกว่าไหล่ หันฝ่ามือออก","ห้อยตัวแขนเหยียด ไหล่ลงต่ำ","ดึงตัวขึ้นบีบสะบักเข้าหากัน","ขึ้นจนคางพ้นบาร์ — ลดลงช้า"],tip:"💡 ถ้าทำไม่ได้ ใช้ Resistance Band หรือ Lat Pulldown แทน"},
+  barbell_row:{name:"Barbell Row",sets:"4×8–10",muscles:["back","arm"],primary:["back"],secondary:["arm"],steps:["งอสะโพก ลำตัวเอียง 45° จับบาร์","ดึงบาร์ขึ้นหาสะดือ บีบสะบัก","หลังตรงตลอด ไม่ Round Back","ลดลงช้า ควบคุมการเคลื่อนไหว"],tip:"💡 Barbell Row คือ King of Back Exercises สำหรับ Thickness"},
+  lat_pulldown:{name:"Lat Pulldown",sets:"3×10–12",muscles:["back"],primary:["back"],secondary:[],steps:["นั่งที่ Machine จับ Bar กว้างกว่าไหล่","ดึงลงหน้าอก บีบสะบักลง","ลำตัวตั้งตรง ไม่เอนหลังเกิน","ปล่อยขึ้นช้า Lat ยืดสุด"],tip:"💡 Lat Pulldown ฝึก Width ของหลัง — คู่กับ Row ที่ฝึก Thickness"},
+  seated_cable_row:{name:"Seated Cable Row",sets:"3×12",muscles:["back","arm"],primary:["back"],secondary:["arm"],steps:["นั่งที่ Machine เท้ายันที่พัก","ดึง Handle มาหาท้อง บีบสะบัก","ลำตัวตั้งตรง ไม่โยกตัว","ปล่อยแขนเหยียดไปหน้าช้าๆ"],tip:"💡 ดึงด้วยข้อศอก ไม่ใช่มือ — คิดว่ามือเป็นแค่ Hook"},
+  face_pull:{name:"Face Pull",sets:"3×15–20",muscles:["shoulder","back"],primary:["shoulder"],secondary:["back"],steps:["ตั้ง Cable ระดับหน้า จับ Rope","ดึง Rope มาหาหน้า แยกมือออก","ข้อศอกขึ้นสูง ไม่ต่ำกว่าไหล่","บีบ External Rotation ค้าง 1 วิ"],tip:"💡 Face Pull ป้องกันไหล่บาดเจ็บ ควรทำทุก Push day"},
+  bicep_curl:{name:"Barbell Bicep Curl",sets:"3×10–12",muscles:["arm"],primary:["arm"],secondary:[],steps:["ยืนตรง จับบาร์แนบลำตัว","ม้วนบาร์ขึ้นโดยงอข้อศอก","ข้อศอกไม่แกว่ง ชิดลำตัว","ลดลงช้า ควบคุม Negative"],tip:"💡 อย่า Cheat curl — ถ้าต้องโยกตัวแสดงว่า Weight เกิน"},
+  hammer_curl:{name:"Hammer Curl",sets:"3×12",muscles:["arm"],primary:["arm"],secondary:[],steps:["ยืนตรง จับ Dumbbell Neutral Grip","ม้วนขึ้นโดยข้อมือหันหน้ากัน","ข้อศอกชิดลำตัว","ลดลงช้า Brachialis ทำงานหลัก"],tip:"💡 Hammer Curl สร้าง Arm ด้านข้าง ทำให้แขนดูหนาขึ้น"},
+
+  // ===== WEIGHT TRAINING — LEGS =====
+  squat:{name:"Back Squat",sets:"4×8–10",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["วาง Barbell บนกล้ามเนื้อ Trap","ยืนกว้างเท่าไหล่ เท้าหันออก 30–45°","ลงช้า 2–3 วิ เข่าตามแนวนิ้วเท้า","ลงต่ำกว่าขนานพื้น ดันพื้นขึ้น"],tip:"💡 เข่าอย่าพับเข้าใน — ถ้าพับให้ลด Weight ลง"},
+  rdl:{name:"Romanian Deadlift",sets:"4×10",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ยืนตรง จับบาร์ระดับสะโพก","โน้มตัวไปหน้า สะโพกยื่นไปหลัง","หลังตรงตลอด ลงจนรู้สึก Hamstring ตึง","ดันสะโพกไปหน้า ยืนตรง"],tip:"💡 RDL ต่างจาก Deadlift — เข่าเกือบตึง โน้มด้วยสะโพก"},
+  hipthrust:{name:"Hip Thrust",sets:"4×15",muscles:["glute","leg"],primary:["glute"],secondary:["leg"],steps:["หลังพักบนม้านั่ง วาง Barbell บนสะโพก","เท้าวางพื้นห่างกำลังพอดี","ดันสะโพกขึ้นสูง บีบ Glute แรง ค้าง 1 วิ","ลดลงช้า ไม่แตะพื้น"],tip:"💡 Hip Thrust คือ King of Glute Exercises"},
+  leg_press:{name:"Leg Press",sets:"4×12–15",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["นั่ง Machine วางเท้ากว้างเท่าไหล่","ปลดล็อค ลดน้ำหนักลงช้า 2 วิ","ลงจนเข่างอ 90° หรือมากกว่า","ดันขึ้นจนเข่าเกือบเหยียด ไม่ Lock"],tip:"💡 Leg Press ให้ Quads ทำงานหนัก — เท้าต่ำ Quad เยอะ เท้าสูง Glute เยอะ"},
+  walking_lunge:{name:"Walking Lunge",sets:"3×12 ก้าว/ข้าง",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ยืนตรง ถือ Dumbbell สองข้าง","ก้าวไปหน้า ลดเข่าหลังลงพื้น","เข่าหน้าไม่เกินนิ้วเท้า","ลุกขึ้นก้าวเท้าหลังมาด้านหน้า"],tip:"💡 Walking Lunge ฝึก Balance + Unilateral Strength"},
+  leg_curl:{name:"Lying Leg Curl",sets:"3×12–15",muscles:["leg"],primary:["leg"],secondary:[],steps:["นอนคว่ำบน Machine ขาอยู่ใต้ Pad","ม้วนขาขึ้นหาก้น","บีบ Hamstring ค้าง 1 วิ","ลดลงช้า Hamstring ยืดสุด"],tip:"💡 Leg Curl Isolation สำหรับ Hamstring — คู่กับ RDL"},
+  calf_raise:{name:"Calf Raise",sets:"4×20",muscles:["calf"],primary:["calf"],secondary:[],steps:["ยืนปลายเท้าบน Step เส้นขอบ","ลดส้นเท้าลงต่ำสุด ยืดน่อง","ดันปลายเท้าขึ้นสูงสุด บีบน่อง","ลดลงช้า ไม่กระโดด"],tip:"💡 Calf ต้องการ Volume สูง ทำ 4×20+ เพื่อโต"},
+
+  // ===== HYROX =====
+  deadlift:{name:"Deadlift",sets:"4×5",muscles:["back","leg","glute"],primary:["back"],secondary:["leg","glute"],steps:["เท้ากว้างเท่าสะโพก บาร์เหนือ Midfoot","งอสะโพก จับบาร์กว้างเท่าขา","หลังตรง อกชู สะบักชิด","ดันพื้นยกบาร์ขึ้น สะโพกและไหล่ขึ้นพร้อมกัน"],tip:"💡 Deadlift คือ Full-body King — สำคัญที่สุดสำหรับ Hyrox"},
+  kbswing:{name:"KB Swing",sets:"4×20",muscles:["glute","leg","back"],primary:["glute"],secondary:["back"],steps:["ยืนกว้างเท่าไหล่ KB หน้าเท้า","งอสะโพกจับ KB แกว่งไปหลัง","ดันสะโพกไปหน้าอย่างระเบิด","KB แกว่งขึ้นระดับหน้าอก"],tip:"💡 Hip Swing ไม่ใช่ Squat — สะโพกคือ Motor"},
+  wallball:{name:"Wall Ball",sets:"4×20",muscles:["leg","shoulder","core"],primary:["leg"],secondary:["shoulder","core"],steps:["ถือ Med Ball ระดับอก ห่างกำแพง 60cm","ลงสควอทต่ำกว่าขนาน","ลุกขึ้นระเบิด ส่ง Ball ขึ้นกำแพง 3m","รับบอลกลับด้วย Squat ต่อเนื่อง"],tip:"💡 Wall Ball = Squat + Push ต้องฝึก Front Squat ก่อน"},
+  burpee:{name:"Burpee Broad Jump",sets:"4×10",muscles:["full"],primary:["full"],secondary:[],steps:["ยืนตรง ลงสควอทวางมือพื้น","กระโดดขาออกท่า Push-up","ทำ Push-up 1 ครั้ง","กระโดดขาเข้า แล้วกระโดดไปหน้า Landing นุ่ม"],tip:"💡 Burpee Broad Jump เป็น Hyrox Signature move"},
+  box_jump:{name:"Box Jump",sets:"4×8",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ยืนหน้า Box เท้ากว้างเท่าไหล่","งอเข่าลง แกว่งแขนไปหน้า","กระโดดขึ้น Box ลง Landing นุ่ม 2 เท้า","ลุกตรง แล้วก้าวลงระวัง"],tip:"💡 เริ่ม Box ต่ำก่อน ค่อยเพิ่ม ไม่รีบ"},
+  farmer_carry:{name:"Farmer Carry",sets:"4×40 เมตร",muscles:["core","arm","leg"],primary:["core"],secondary:["arm"],steps:["จับ Kettlebell หรือ Dumbbell หนักสองข้าง","ยืนตรง ไหล่ลง สะบักชิด","เดินด้วยก้าวสั้น เร็ว มั่นคง","Core แน่น หายใจสม่ำเสมอ"],tip:"💡 Farmer Carry ฝึก Grip Strength + Core Stability — Critical สำหรับ Hyrox"},
+  row_machine:{name:"Rowing Machine",sets:"4×500m",muscles:["back","leg","core"],primary:["back"],secondary:["leg","core"],steps:["นั่งบน Rower จับ Handle เท้าล็อค","ดันขาออกก่อน แล้วโน้มตัวไปหลัง","ดึง Handle มาหาท้องส่วนล่าง","เหยียดแขน โน้มตัวไปหน้า งอเข่ากลับ"],tip:"💡 Rowing ใช้ 60% ขา 20% Core 20% แขน — ขาคือ Power"},
+  ski_erg:{name:"SkiErg / Rope Pull Sim",sets:"4×60วิ",muscles:["back","core","shoulder"],primary:["back"],secondary:["core","shoulder"],steps:["ยืนหน้า SkiErg หรือใช้ Rope กับ Pulley","จับ Handle สองข้าง ดึงลงพร้อมงอตัว","ใช้ Core + หลัง ไม่ใช่แค่แขน","ปล่อยขึ้นช้า แล้วดึงรอบใหม่ต่อเนื่อง"],tip:"💡 SkiErg Station แรกใน Hyrox Race — ฝึกให้ชินจะได้เปรียบ"},
+  sled_push:{name:"Sled Push Simulation",sets:"4×20 เมตร",muscles:["leg","glute","core"],primary:["leg"],secondary:["glute","core"],steps:["ยืนหลัง Sled มือวางบน Handle","ก้าวสั้นๆ เร็ว ดันด้วยขาและสะโพก","ลำตัวเอียงไปหน้า ไม่ตั้งตรง","Core แน่น หายใจสม่ำเสมอ"],tip:"💡 ถ้าไม่มี Sled ใช้ Wall Push หรือ Partner Push แทน"},
+
+  // ===== BADMINTON =====
+  shadowfootwork:{name:"Shadow Footwork",sets:"3×60วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["ยืนตรงกลางสนามท่า Ready Position","วิ่งไปมุมสนาม 6 มุม แตะพื้น","วิ่งกลับกลางหลังแตะทุกมุม","ใช้ Split Step ทุกครั้งที่ออกตัว"],tip:"💡 Shadow คือ Drill ที่ดีที่สุดสำหรับ Footwork — ทำทุกวันก็ได้"},
+  lateral_bound:{name:"Lateral Bounds",sets:"3×12/ข้าง",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ยืนขาเดียว งอเข่าเล็กน้อย","กระโดดออกด้านข้างด้วยขา Support","Landing นุ่ม ขาเดียว ค้างสมดุล 1 วิ","กระโดดกลับสลับข้าง"],tip:"💡 ฝึก Lateral Power — เหมือน Split Step ใน Badminton"},
+  split_step_drill:{name:"Split Step + React",sets:"4×60วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["ยืนท่า Ready Position หน้าสนาม","กระโดดเล็กๆ Split Step ตลอด","พาร์ทเนอร์ชี้ทิศ วิ่งออก 2 ก้าว","วิ่งกลับตรงกลาง Split Step ใหม่"],tip:"💡 Split Step ต้องเกิดขึ้น ก่อน ผู้เล่นอีกฝั่งตี ไม่ใช่หลัง"},
+  jump_smash:{name:"Jump Smash Practice",sets:"3×20 ครั้ง",muscles:["leg","shoulder","core"],primary:["leg"],secondary:["shoulder"],steps:["วิ่งเข้าหา Shuttle (หรือ Feed)","กระโดดด้วยขาข้างที่ถนัด","ตีขณะอยู่กลางอากาศ จุดสูงสุด","Landing นุ่ม หน้าเท้าก่อน"],tip:"💡 Jump Smash ต้องการ Leg Power + Timing — ฝึกแยก Jump ก่อน"},
+  core_rotation:{name:"Core Rotation (Med Ball)",sets:"3×15/ข้าง",muscles:["core"],primary:["core"],secondary:[],steps:["นั่งบนพื้น เข่างอ ถือ Med Ball","หมุนตัวซ้ายขวา แตะ Ball กับพื้น","Core บีบตลอด ไม่ Relax","เพิ่มความเร็วเมื่อชำนาญ"],tip:"💡 Core Rotation เลียนแบบการหมุนตีลูก — ทำทุก Pattern"},
+  reaction_drill:{name:"Reaction Drill",sets:"4×60วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["ยืนกลางสนาม ท่า Ready","พาร์ทเนอร์โยน Shuttle ไปมุมต่างๆ","React ทันที วิ่งรับ","กลับตรงกลางทุกครั้ง"],tip:"💡 Reaction Time ฝึกได้ — ยิ่งฝึกยิ่งเร็ว"},
+
+  // ===== RUNNING =====
+  zone2run:{name:"Zone 2 Easy Run",sets:"30–40 นาที",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วอร์มอัพเดิน 5 นาที","วิ่งเหยาะ พูดได้แต่ไม่สบาย HR 115–136","ระหว่างทางรักษา Pace สม่ำเสมอ","Cool down เดิน 5 นาที"],tip:"💡 Zone 2 คือ Fat Oxidation Zone — ทำสม่ำเสมอช่วยเพิ่ม Aerobic Base"},
+  tempo_run:{name:"Tempo Run",sets:"20–30 นาที",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วอร์มอัพ 10 นาที Zone 2","เพิ่ม Pace จนรู้สึก Comfortably Hard","พูดได้แค่ 2–3 คำ HR 80–90% Max","Cool down 10 นาที"],tip:"💡 Tempo Run เพิ่ม Lactate Threshold — Pace จะเร็วขึ้นเรื่อยๆ"},
+  interval_400:{name:"400m Intervals",sets:"6×400m (พัก 90วิ)",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วอร์มอัพ 10 นาที","วิ่ง 400m เต็มสปีด (ไม่ใช่ Sprint สุด)","พัก 90 วินาที เดินหรือยืน","ทำซ้ำ 6 รอบ แล้ว Cool down"],tip:"💡 Interval ฝึก Speed + VO2Max ใน 30 นาที"},
+  strides:{name:"Strides 100m",sets:"6×100m",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วิ่ง 100m โดยค่อยๆ เร่งความเร็ว","ช่วงกลาง 20m วิ่งเร็วสุด 95%","ค่อยๆ ลดความเร็วช่วงท้าย","เดินกลับพัก 60–90 วิ"],tip:"💡 Strides ฝึก Running Economy ไม่ทำให้เหนื่อย ทำหลัง Easy Run ได้"},
+  long_run:{name:"Long Run",sets:"60–90 นาที",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["เริ่มช้ากว่า Zone 2 เล็กน้อย","รักษา Pace คงที่ตลอด","ดื่มน้ำทุก 20–30 นาที","สัปดาห์ละ 1 ครั้ง เพิ่มระยะ 10%/สัปดาห์"],tip:"💡 Long Run สร้าง Aerobic Endurance — Base สำคัญที่สุดของนักวิ่ง"},
+
+  // ===== SWIMMING =====
+  freestyle_drill:{name:"Freestyle Drill",sets:"4×100m",muscles:["back","shoulder","core"],primary:["back"],secondary:["shoulder"],steps:["ดึง Catch up Drill — รอมือหน้าก่อนดึง","Focus Rotation — หมุนตัวด้านข้าง 45°","High Elbow Catch ขณะดึงน้ำ","Finish ดันน้ำไปด้านหลังต้นขา"],tip:"💡 Technique ดีกว่า Fitness — ว่ายน้ำ 10 km ด้วย Technique ผิดไม่ช่วยอะไร"},
+  kick_set:{name:"Kick Set (กระดาน)",sets:"4×50m",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["จับ Kickboard แขนเหยียดหน้า","เตะขาจากสะโพก ไม่ใช่เข่า","เท้าตึง นิ้วชี้ลง","หน้าอยู่ในน้ำ ขึ้นหายใจทุก 4–6 เตะ"],tip:"💡 Kick ที่แข็งแกร่งช่วย Balance ร่างกายในน้ำ"},
+  pull_set:{name:"Pull Set (ทุ่น)",sets:"4×100m",muscles:["back","shoulder","arm"],primary:["back"],secondary:["shoulder"],steps:["คีบ Pull Buoy ระหว่างต้นขา","ว่ายโดยใช้แค่แขน ไม่เตะขา","Focus High Elbow Pull + Finish","หายใจสม่ำเสมอ"],tip:"💡 Pull Set ฝึก Upper Body Strength + Catch Technique"},
+  swim_interval:{name:"Swim Interval",sets:"8×50m (พัก 30วิ)",muscles:["back","shoulder","leg","core"],primary:["back"],secondary:["leg","core"],steps:["ว่าย 50m เร็วที่สุดที่ Control ได้","พัก 30 วินาที ที่ขอบสระ","รักษา Split Time ทุก Set","Set สุดท้ายให้ Fast สุด"],tip:"💡 Interval ว่ายน้ำ เพิ่ม Speed + VO2Max เหมือน Run Interval"},
+
+  // ===== MUAY THAI =====
+  shadow_boxing:{name:"Shadow Boxing",sets:"4×3 นาที (พัก 1 นาที)",muscles:["shoulder","core","leg"],primary:["shoulder"],secondary:["core"],steps:["ยืนท่า Guard มือป้องหน้า","ชกหมัด เตะ ต่อยชุด ในจินตนาการ","เคลื่อนที่ตลอด ไม่ยืนนิ่ง","เพิ่มความเร็วและความหนักขึ้นเรื่อยๆ"],tip:"💡 Shadow Boxing คือการ Visualize — ทำช้าๆ Focus Technique ก่อน Speed"},
+  heavy_bag:{name:"Heavy Bag Work",sets:"4×3 นาที",muscles:["shoulder","core","leg"],primary:["shoulder"],secondary:["core"],steps:["ต่อยหมัด Jab-Cross-Hook-Uppercut","เตะ Teep, Roundhouse, Push Kick","Combo 3–5 Strikes แล้วกลับ Guard","ขยับรอบถุงตลอด ไม่ยืนนิ่ง"],tip:"💡 Bag ให้ Feedback — ถ้าถุงไม่ขยับ Power ยังน้อยอยู่"},
+  jump_rope:{name:"Jump Rope",sets:"5×3 นาที (พัก 1 นาที)",muscles:["leg","calf","shoulder"],primary:["leg"],secondary:["calf"],steps:["กระโดดด้วยปลายเท้า ส้นเท้าไม่แตะพื้น","ข้อมือหมุน ไม่ใช่ไหล่","เริ่ม Basic 2 เท้า ก่อน Alternate Foot","เพิ่มความเร็วและ Pattern ขึ้น"],tip:"💡 Jump Rope ดีกว่า Treadmill สำหรับ Boxing Conditioning"},
+  core_muay:{name:"Core Conditioning",sets:"3×20",muscles:["core"],primary:["core"],secondary:[],steps:["Sit-up ตีขา (ทั่วไป)","Russian Twist ด้วย Med Ball","Plank 45–60 วิ","Bicycle Crunch"],tip:"💡 Core แข็งแกร่ง = พลัง Rotation + ทนการ Body Shot"},
+
+  // ===== CYCLING + FOOTBALL =====
+  sprint_interval:{name:"Sprint Intervals",sets:"8×30m (พัก 60วิ)",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["วอร์มอัพ Jog 5 นาที","Sprint 30m เต็มสปีด","เดินกลับจุดตั้งต้น","ทำซ้ำ 8 รอบ"],tip:"💡 Sprint Interval เพิ่ม Speed + Power ใน 15 นาที"},
+  agility_ladder:{name:"Agility Ladder",sets:"4×30วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วาง Ladder บนพื้น","วิ่ง In-Out, Lateral, Ickey Shuffle","ก้าวเท้าเร็ว แม่นยำ","จับเวลา ลดลงทุกสัปดาห์"],tip:"💡 Agility ฝึกเท้าให้ Quick — ช่วยทุกกีฬา"},
+  cycling_interval:{name:"Cycling Interval",sets:"8×1 นาที (พัก 1 นาที)",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["วอร์มอัพ 10 นาที Low Resistance","เพิ่ม Resistance สูง ปั่น 1 นาทีหนัก","ลด Resistance พัก 1 นาที","ทำ 8 รอบ แล้ว Cool down"],tip:"💡 HIIT Cycling เผาไขมันได้มากใน 30 นาที"},
+  zone2_cycle:{name:"Zone 2 Cycling",sets:"45–60 นาที",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ตั้ง Resistance ให้ HR อยู่ 115–136 bpm","รักษา Cadence 80–90 RPM","Breathing สม่ำเสมอ พูดได้","Cool down 5 นาที"],tip:"💡 Zone 2 Cycling = Aerobic Base Building เหมือน Zone 2 Run"},
+  mountainclimber:{name:"Mountain Climber",sets:"4×40วิ",muscles:["core","leg"],primary:["core"],secondary:["leg"],steps:["เริ่มท่า Plank สูง แขนเหยียด","ดึงเข่าขวาเข้าหาอก สลับเร็ว","สะโพกไม่ขึ้นลง ลำตัวตรง","เร็วขึ้นเรื่อยๆ"],tip:"💡 ยิ่งเร็วยิ่งเผาไขมันมาก สะโพกไม่ขึ้น"},
 }
 
 // ======= MUSCLE SVG =======
@@ -370,111 +460,480 @@ function buildExList(keys){
       </div><span class="ex-arrow">›</span></div>`
   }).join('')
 }
-function getIcon(k){return{benchpress:'🏋️',pullup:'🆙',squat:'👑',rdl:'🏋️',hipthrust:'🍑',burpee:'🔥',mountainclimber:'🧗',deadlift:'💀',kbswing:'🔔',wallball:'⚽',shadowfootwork:'🏸',zone2run:'🏃'}[k]||'💪'}
+function getIcon(k){return{
+  benchpress:'🏋️',incline_db_press:'💪',overhead_press:'🙌',lateral_raise:'🦅',tricep_pushdown:'💥',chest_fly:'🦋',dips:'⬇️',
+  pullup:'🆙',barbell_row:'🏋️',lat_pulldown:'⬇️',seated_cable_row:'🚣',face_pull:'🎯',bicep_curl:'💪',hammer_curl:'🔨',
+  squat:'👑',rdl:'🏋️',hipthrust:'🍑',leg_press:'🦵',walking_lunge:'🚶',leg_curl:'🦵',calf_raise:'🦶',
+  deadlift:'💀',kbswing:'🔔',wallball:'⚽',burpee:'🔥',box_jump:'📦',farmer_carry:'🧳',row_machine:'🚣',ski_erg:'⛷️',sled_push:'🛷',
+  shadowfootwork:'🏸',lateral_bound:'↔️',split_step_drill:'⚡',jump_smash:'💥',core_rotation:'🌀',reaction_drill:'⚡',
+  zone2run:'🏃',tempo_run:'⏱️',interval_400:'🏃',strides:'💨',long_run:'🌄',
+  freestyle_drill:'🏊',kick_set:'🦵',pull_set:'💪',swim_interval:'⏱️',
+  shadow_boxing:'🥊',heavy_bag:'🥊',jump_rope:'🪢',core_muay:'🎯',
+  sprint_interval:'⚡',agility_ladder:'🪜',cycling_interval:'🚴',zone2_cycle:'🚴',
+  mountainclimber:'🧗'
+}[k]||'💪'}
 
 // ======= GENERATE WORKOUT BASED ON SPORTS + GOAL =======
-function generateWorkoutPlan(sports, goal, r) {
-  const hasBad = sports.includes('badminton')
-  const hasRun = sports.includes('running')
-  const hasHyrox = sports.includes('hyrox')
+function generateWorkoutPlan(sports, goal, cr) {
+  const has = s => sports.includes(s)
+  const hasWT = has('weight_training')
+  const hasBad = has('badminton')
+  const hasRun = has('running')
+  const hasHyrox = has('hyrox')
+  const hasSwim = has('swimming')
+  const hasCycle = has('cycling')
+  const hasFoot = has('football')
+  const hasMuay = has('muaythai')
+  const noSport = sports.length === 0
 
-  // Dynamic week based on sports
-  let weekDays = [
-    {name:'MON',icon:'💪',type:'PUSH',cls:'dt-w',mins:'45 min'},
-    {name:'TUE',icon: hasBad?'🏸':hasRun?'🏃':'🚴',type:hasBad?'BADMINTON':hasRun?'RUN Z2':'CARDIO',cls:hasBad?'dt-a':'dt-c',mins:hasBad?'90 min':'30 min'},
-    {name:'WED',icon:'🏋️',type:'PULL',cls:'dt-w',mins:'45 min'},
-    {name:'THU',icon:hasHyrox?'🔥':'⚡',type:hasHyrox?'HYROX SIM':'HIIT',cls:'dt-h',mins:'25 min'},
-    {name:'FRI',icon:'🦵',type:'LEGS',cls:'dt-w',mins:'50 min'},
-    {name:'SAT',icon:hasBad?'🏸':hasRun?'🏃':'🌊',type:hasBad?'BADMINTON':hasRun?'LONG RUN':'ACTIVE',cls:hasBad?'dt-a':hasRun?'dt-c':'dt-a',mins:hasBad?'120 min':hasRun?'60 min':'45 min'},
-    {name:'SUN',icon:'😴',type:'REST',cls:'dt-r',mins:'ยืด'},
-  ]
+  // ---- WEEK SCHEDULE ----
+  let days = []
+  if (hasWT || noSport) {
+    days.push(
+      {name:'MON',icon:'🏋️',type:'PUSH',cls:'dt-w',mins:'50 min'},
+      {name:'WED',icon:'🏋️',type:'PULL',cls:'dt-w',mins:'50 min'},
+      {name:'FRI',icon:'🦵',type:'LEGS',cls:'dt-w',mins:'55 min'}
+    )
+  }
+  if (hasBad) days.push({name:'TUE',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'90 min'},{name:'SAT',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'120 min'})
+  if (hasRun) days.push({name:'TUE',icon:'🏃',type:'ZONE 2',cls:'dt-c',mins:'40 min'},{name:'THU',icon:'🏃',type:'INTERVALS',cls:'dt-h',mins:'30 min'},{name:'SAT',icon:'🏃',type:'LONG RUN',cls:'dt-c',mins:'75 min'})
+  if (hasHyrox) days.push({name:'THU',icon:'🔥',type:'HYROX SIM',cls:'dt-h',mins:'40 min'},{name:'SAT',icon:'🔥',type:'HYROX STR',cls:'dt-h',mins:'50 min'})
+  if (hasSwim) days.push({name:'TUE',icon:'🏊',type:'SWIM',cls:'dt-a',mins:'45 min'},{name:'THU',icon:'🏊',type:'SWIM INT',cls:'dt-h',mins:'40 min'})
+  if (hasCycle) days.push({name:'TUE',icon:'🚴',type:'ZONE 2',cls:'dt-c',mins:'60 min'},{name:'SAT',icon:'🚴',type:'INTERVALS',cls:'dt-h',mins:'40 min'})
+  if (hasFoot) days.push({name:'TUE',icon:'⚽',type:'FOOTBALL',cls:'dt-a',mins:'90 min'},{name:'THU',icon:'⚡',type:'AGILITY',cls:'dt-h',mins:'30 min'})
+  if (hasMuay) days.push({name:'TUE',icon:'🥊',type:'MUAY THAI',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🥊',type:'MUAY THAI',cls:'dt-a',mins:'60 min'})
+
+  // Deduplicate: keep first occurrence per day name, then sort by order
+  const order = ['MON','TUE','WED','THU','FRI','SAT','SUN']
+  const byName = {}
+  days.forEach(d => { if(!byName[d.name]) byName[d.name] = d })
+  if (!byName['SUN']) byName['SUN'] = {name:'SUN',icon:'😴',type:'REST',cls:'dt-r',mins:'ยืด'}
+  const weekDays = order.filter(n => byName[n]).map(n => byName[n])
 
   const weekHTML = weekDays.map(d=>`<div class="day-card"><div class="day-name">${d.name}</div><div class="day-icon">${d.icon}</div><div class="day-type ${d.cls}">${d.type}</div><div class="day-mins">${d.mins}</div></div>`).join('')
 
-  let exercises = {
-    push: ['benchpress'],
-    pull: ['pullup'],
-    hiit: ['burpee','mountainclimber'],
-    legs: ['squat','rdl','hipthrust'],
-  }
-  if(hasHyrox) { exercises.hiit = ['burpee','kbswing','wallball','deadlift'] }
-  if(hasBad) { exercises.drills = ['shadowfootwork'] }
-  if(hasRun) { exercises.cardio = ['zone2run'] }
+  let html = `<div class="card"><div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์</div><div class="week-grid">${weekHTML}</div></div>`
 
-  let panelHTML = `
-    <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์ของคุณ</div>
-      <div class="week-grid">${weekHTML}</div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>จันทร์ — PUSH DAY</div>
-      ${buildExList(exercises.push)}
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>พุธ — PULL DAY</div>
-      ${buildExList(exercises.pull)}
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — ${hasHyrox?'HYROX SIM':'HIIT'}</div>
-      ${buildExList(exercises.hiit)}
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>ศุกร์ — LEG DAY</div>
-      ${buildExList(exercises.legs)}
+  // ---- WEIGHT TRAINING PROGRAM ----
+  if (hasWT || noSport) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent4)">
+      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏋️ WEIGHT TRAINING PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Push / Pull / Legs Split · ${goal==='muscle_gain'?'Volume เน้นเพิ่มกล้ามเนื้อ':goal==='fat_loss'?'Compound + Superset เพิ่ม Calorie Burn':'Maintenance Load'}</div>
+
+      <div class="card-title" style="font-size:.8em;margin-top:4px"><span class="dot" style="background:var(--accent4)"></span>จันทร์ — PUSH DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(อก · ไหล่ · Tricep)</span></div>
+      ${buildExList(['benchpress','incline_db_press','overhead_press','lateral_raise','tricep_pushdown','chest_fly'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent3)"></span>พุธ — PULL DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(หลัง · Bicep)</span></div>
+      ${buildExList(['pullup','barbell_row','lat_pulldown','seated_cable_row','face_pull','bicep_curl','hammer_curl'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--red)"></span>ศุกร์ — LEG DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(ขา · Glute · น่อง)</span></div>
+      ${buildExList(['squat','rdl','hipthrust','leg_press','walking_lunge','leg_curl','calf_raise'])}
     </div>`
+  }
 
-  if(hasBad) panelHTML += `<div class="card"><div class="card-title"><span class="dot" style="background:var(--accent5)"></span>แบดมินตัน — Drills</div>${buildExList(exercises.drills)}</div>`
-  if(hasRun) panelHTML += `<div class="card"><div class="card-title"><span class="dot" style="background:var(--accent3)"></span>วิ่ง — Zone 2 Cardio</div>${buildExList(exercises.cardio)}</div>`
+  // ---- HYROX PROGRAM ----
+  if (hasHyrox) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent2)">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 HYROX PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Functional Fitness · Strength + Endurance + Race Simulation</div>
 
-  return panelHTML
+      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — HYROX SIMULATION <span style="font-size:.7em;color:var(--muted);font-weight:400">(Circuit เลียนแบบ Race)</span></div>
+      <div class="info-box ib-b" style="margin-bottom:12px"><strong>CIRCUIT FORMAT</strong>ทำต่อเนื่อง: Row 500m → KB Swing 20 → Wall Ball 20 → Burpee Broad Jump 10 → พัก 3 นาที × 3 รอบ</div>
+      ${buildExList(['row_machine','kbswing','wallball','burpee'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent)"></span>เสาร์ — STRENGTH FOUNDATIONS <span style="font-size:.7em;color:var(--muted);font-weight:400">(แรงพื้นฐาน)</span></div>
+      ${buildExList(['deadlift','farmer_carry','box_jump','ski_erg','sled_push'])}
+    </div>`
+  }
+
+  // ---- BADMINTON PROGRAM ----
+  if (hasBad) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent5)">
+      <div class="card-title"><span class="dot" style="background:var(--accent5)"></span>🏸 BADMINTON PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Court Drills + Physical Conditioning · เล่น 2 วัน/สัปดาห์</div>
+
+      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent5)"></span>On-Court Drills <span style="font-size:.7em;color:var(--muted);font-weight:400">(ทำก่อน Match 15–20 นาที)</span></div>
+      ${buildExList(['shadowfootwork','split_step_drill','reaction_drill','jump_smash'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent3)"></span>Off-Court Conditioning <span style="font-size:.7em;color:var(--muted);font-weight:400">(วันไม่เล่นแบด)</span></div>
+      ${buildExList(['lateral_bound','core_rotation','squat','calf_raise'])}
+    </div>`
+  }
+
+  // ---- RUNNING PROGRAM ----
+  if (hasRun) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent3)">
+      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🏃 RUNNING PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">3 Run/week: Zone 2 · Intervals · Long Run · ฝึก Aerobic Base</div>
+
+      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent3)"></span>อังคาร — ZONE 2 BASE</div>
+      ${buildExList(['zone2run'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — SPEED WORK</div>
+      ${buildExList(['interval_400','strides'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent4)"></span>เสาร์ — LONG RUN + TEMPO</div>
+      ${buildExList(['long_run','tempo_run'])}
+    </div>`
+  }
+
+  // ---- SWIMMING PROGRAM ----
+  if (hasSwim) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent4)">
+      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏊 SWIMMING PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Technique + Endurance · 2 ครั้ง/สัปดาห์</div>
+
+      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent4)"></span>อังคาร — TECHNIQUE DAY</div>
+      ${buildExList(['freestyle_drill','kick_set','pull_set'])}
+
+      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — INTERVAL DAY</div>
+      ${buildExList(['swim_interval'])}
+    </div>`
+  }
+
+  // ---- CYCLING PROGRAM ----
+  if (hasCycle) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent3)">
+      <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🚴 CYCLING PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Zone 2 Base + HIIT Intervals · Cadence 80–90 RPM</div>
+      ${buildExList(['zone2_cycle','cycling_interval'])}
+    </div>`
+  }
+
+  // ---- FOOTBALL PROGRAM ----
+  if (hasFoot) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent2)">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>⚽ FOOTBALL FITNESS</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Speed · Agility · Endurance · ฝึก 2 ครั้ง/สัปดาห์</div>
+      ${buildExList(['sprint_interval','agility_ladder','zone2run','squat','walking_lunge'])}
+    </div>`
+  }
+
+  // ---- MUAY THAI PROGRAM ----
+  if (hasMuay) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--red)">
+      <div class="card-title"><span class="dot" style="background:var(--red)"></span>🥊 MUAY THAI PROGRAM</div>
+      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Technique + Conditioning · 2–3 ครั้ง/สัปดาห์</div>
+      ${buildExList(['jump_rope','shadow_boxing','heavy_bag','core_muay'])}
+    </div>`
+  }
+
+  // ---- GENERAL HIIT (no sport selected + fat loss, or truly empty) ----
+  if ((noSport && goal==='fat_loss') || (!hasWT && !hasHyrox && !hasBad && !hasRun && !hasSwim && !hasCycle && !hasFoot && !hasMuay)) {
+    html += `
+    <div class="card" style="border-left:3px solid var(--accent2)">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 HIIT CARDIO</div>
+      ${buildExList(['burpee','mountainclimber','box_jump'])}
+    </div>`
+  }
+
+  // ---- RECOVERY NOTE ----
+  html += `<div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--muted)"></span>😴 Recovery & Mobility</div>
+    <div class="info-box ib-y"><strong>กฎเหล็ก</strong>
+      นอนหลับ 7–8 ชั่วโมง · Progressive Overload: เพิ่ม Weight/Rep 2–5% ทุก 2 สัปดาห์<br>
+      ถ้าปวดเมื่อย overreaching ให้ Deload 1 สัปดาห์ (ลด Weight 40–50%)
+    </div>
+  </div>`
+
+  return html
 }
 
-// ======= GENERATE FOOD PLAN =======
+// ======= DAILY MENU DATABASE (7 days rotation) =======
+const DAILY_MENUS = [
+  // 0 = อาทิตย์ — Light recovery day
+  {
+    label: 'วันอาทิตย์ — Recovery Day 🌿',
+    breakfast: {
+      name: 'โอ๊ตมีล + ไข่ต้ม + นมจืด',
+      items: [
+        {main:'โอ๊ตมีล', alt:'ทางเลือก: มูสลี่ ไม่น้ำตาล', amt:'50g (ดิบ)'},
+        {main:'ไข่ต้ม', alt:'ทางเลือก: ออมเลต ใส่เห็ด', amt:'2 ฟอง'},
+        {main:'นมจืดพร่องมัน', alt:'ทางเลือก: นมอัลมอนด์ ไม่หวาน', amt:'1 กล่อง'},
+      ]
+    },
+    lunch: {
+      name: 'ข้าวต้มปลา + ผักนึ่ง',
+      items: [
+        {main:'ข้าวต้มปลากะพง / ปลาทู', alt:'โปรตีนสูง ย่อยง่าย', amt:'1 ชาม'},
+        {main:'บรอกโคลีนึ่ง + แครอท', alt:'ผักสีเข้ม = ต้านอักเสบ', amt:'1 จาน'},
+        {main:'กล้วยหอม', alt:'ฟื้นฟูกล้ามเนื้อ', amt:'1 ลูก'},
+      ]
+    },
+    dinner: {
+      name: 'สลัดอกไก่ + ไข่ต้ม',
+      items: [
+        {main:'อกไก่ต้มสับ', alt:'ย่าง/อบก็ได้ ไม่ใส่น้ำมัน', amt:'150g'},
+        {main:'ผักสลัดผสม + แตงกวา + มะเขือเทศ', alt:'น้ำสลัดใช้มะนาว+พริกไทย', amt:'เต็มถาด'},
+        {main:'ไข่ต้ม', alt:'โปรตีนเพิ่ม', amt:'2 ฟอง'},
+      ]
+    }
+  },
+  // 1 = จันทร์ — Strong start
+  {
+    label: 'วันจันทร์ — Power Start 💪',
+    breakfast: {
+      name: 'ไข่ + ข้าวกล้อง + ผักต้ม',
+      items: [
+        {main:'ไข่ต้ม / ไข่ดาว', alt:'ทางเลือก: ไข่เจียว น้ำมันน้อย', amt:'3 ฟอง'},
+        {main:'ข้าวกล้อง', alt:'ทางเลือก: โฮลวีตโรล 2 แผ่น', amt:'1 ทัพพี'},
+        {main:'ผักต้มลวก', alt:'บรอกโคลี, คะน้า, ถั่วฝักยาว', amt:'1 ถ้วย'},
+      ]
+    },
+    lunch: {
+      name: 'ข้าวกล้อง + ไก่ย่าง + แกงส้ม',
+      items: [
+        {main:'ไก่ย่าง / อกไก่ต้ม', alt:'หลีกเลี่ยงหนังไก่', amt:'200g'},
+        {main:'ข้าวกล้อง', alt:'ทางเลือก: มันเทศนึ่ง', amt:'1.5 ทัพพี'},
+        {main:'แกงส้มผัก (ไม่ใส่กะทิ)', alt:'หรือต้มจืดเต้าหู้', amt:'1 ชาม'},
+      ]
+    },
+    dinner: {
+      name: 'ปลานึ่ง + ข้าวกล้อง + ผักบุ้ง',
+      items: [
+        {main:'ปลานึ่งมะนาว / ปลากะพง / ปลาแซลมอน', alt:'โอเมก้า 3 สูง', amt:'200g'},
+        {main:'ข้าวกล้อง', alt:'วันออกกำลังกายหนัก เพิ่มได้', amt:'0.5 ทัพพี'},
+        {main:'ผักบุ้งลวก / ผักโขม', alt:'ผักใบเขียว = แมกนีเซียม', amt:'เต็มจาน'},
+      ]
+    }
+  },
+  // 2 = อังคาร — Protein focus
+  {
+    label: 'วันอังคาร — Protein Day 🥩',
+    breakfast: {
+      name: 'Whey Protein Shake + โอ๊ตมีล + กล้วย',
+      items: [
+        {main:'Whey Protein Shake', alt:'ทางเลือก: นมจืด 2 กล่อง', amt:'1 scoop'},
+        {main:'โอ๊ตมีล', alt:'ผสมในชง หรือกินแยก', amt:'60g (ดิบ)'},
+        {main:'กล้วยหอม', alt:'ทางเลือก: เบอร์รี่ผสม', amt:'1 ลูก'},
+      ]
+    },
+    lunch: {
+      name: 'ก๋วยเตี๋ยวเนื้อน้ำใส / เส้นหมีไก่',
+      items: [
+        {main:'เส้นหมี / เส้นใส (เลี่ยงบะหมี่กะทิ)', alt:'คาร์บชนิดย่อยเร็ว', amt:'1 ชาม'},
+        {main:'เนื้อ / ไก่ (ไม่ติดมัน)', alt:'เพิ่มปริมาณเนื้อสัตว์ได้', amt:'150g'},
+        {main:'ผักสด + ถั่วงอก + ต้นหอม', alt:'เพิ่มโดยไม่เพิ่มแคล', amt:'เต็มชาม'},
+      ]
+    },
+    dinner: {
+      name: 'ต้มจืดหมูสับ + เต้าหู้ + ไข่ต้ม',
+      items: [
+        {main:'ต้มจืดเต้าหู้หมูสับ', alt:'น้ำซุปใส ไม่ข้น', amt:'1 ชาม'},
+        {main:'ไข่ต้ม', alt:'เพิ่มโปรตีนช่วงกลางคืน', amt:'2 ฟอง'},
+        {main:'ข้าวกล้อง', alt:'ลดลงได้ถ้าเป้าลดไขมัน', amt:'0.5 ทัพพี'},
+      ]
+    }
+  },
+  // 3 = พุธ — Midweek variety
+  {
+    label: 'วันพุธ — Midweek Fuel ⚡',
+    breakfast: {
+      name: 'ออมเลต + โฮลวีต + นมจืด',
+      items: [
+        {main:'ออมเลตไข่ขาว (+ ไข่แดง 1 ฟอง)', alt:'เห็ด, พริกหยวก, ผักโขม', amt:'3–4 ฟอง'},
+        {main:'โฮลวีตโรล / ขนมปังโฮลวีต', alt:'ทางเลือก: อาเจ, crackers', amt:'2 แผ่น'},
+        {main:'นมจืดพร่องมัน', alt:'หรือกาแฟดำ (ไม่น้ำตาล)', amt:'1 กล่อง'},
+      ]
+    },
+    lunch: {
+      name: 'ข้าวหน้าไก่ / กะเพราไก่ (น้ำมันน้อย)',
+      items: [
+        {main:'กะเพราอกไก่ (น้ำมัน 1 ช้อนชา)', alt:'ทางเลือก: ข้าวหน้าไก่ไม่ติดหนัง', amt:'เต็มจาน'},
+        {main:'ข้าวกล้อง / ข้าวสวย', alt:'มื้อนี้คาร์บได้มากขึ้น', amt:'1.5 ทัพพี'},
+        {main:'แตงกวา + มะเขือเทศ (ข้างจาน)', alt:'เพิ่มไฟเบอร์ฟรี', amt:'ตามชอบ'},
+      ]
+    },
+    dinner: {
+      name: 'ปลาแซลมอนอบ + มันหวาน + สลัด',
+      items: [
+        {main:'ปลาแซลมอนอบ / ย่าง', alt:'โอเมก้า 3 ช่วยฟื้นฟูกล้ามเนื้อ', amt:'150g'},
+        {main:'มันหวานนึ่ง / อบ', alt:'คาร์บ GI ต่ำ เหมาะมื้อเย็น', amt:'100g'},
+        {main:'สลัดผักสด น้ำสลัดมะนาว', alt:'ไม่ใช้น้ำสลัดครีม', amt:'เต็มจาน'},
+      ]
+    }
+  },
+  // 4 = พฤหัส — Pre-weekend boost
+  {
+    label: 'วันพฤหัส — Pre-Weekend Boost 🚀',
+    breakfast: {
+      name: 'Protein Smoothie',
+      items: [
+        {main:'กล้วยหอม + นมจืด + Whey', alt:'ปั่นรวมกัน ดื่มทันที', amt:'1 แก้ว'},
+        {main:'โอ๊ตมีลแห้ง (ใส่ในสมูทตี้)', alt:'เพิ่ม texture + carb', amt:'40g'},
+        {main:'ถั่วอัลมอนด์ / เมล็ดเจีย', alt:'ไขมันดี + โอเมก้า 3', amt:'1 กำมือ'},
+      ]
+    },
+    lunch: {
+      name: 'ซุปเส้นหมีไก่ / ข้าวผัดไข่คลีน',
+      items: [
+        {main:'ข้าวผัดไข่ (น้ำมัน 1 ช้อนชา)', alt:'ทางเลือก: เส้นหมีต้มไก่', amt:'1 จาน'},
+        {main:'ผักในผัด: ต้นหอม, กะหล่ำปลี', alt:'เพิ่มผักได้ไม่จำกัด', amt:'เต็ม'},
+        {main:'ไข่ดาว / ไข่เจียวข้าง', alt:'โปรตีนเพิ่ม', amt:'1 ฟอง'},
+      ]
+    },
+    dinner: {
+      name: 'ไข่ต้ม + ข้าวกล้อง + บรอกโคลีต้ม',
+      items: [
+        {main:'ไข่ต้ม', alt:'มื้อเย็นเบา ย่อยง่าย', amt:'3 ฟอง'},
+        {main:'ข้าวกล้อง', alt:'คาร์บพอประมาณ', amt:'0.5 ทัพพี'},
+        {main:'บรอกโคลีต้ม + แครอท', alt:'วิตามิน C + ไฟเบอร์', amt:'เต็มจาน'},
+      ]
+    }
+  },
+  // 5 = ศุกร์ — Seafood day
+  {
+    label: 'วันศุกร์ — Seafood Friday 🦐',
+    breakfast: {
+      name: 'ไข่ดาว + เบคอนไก่ + โฮลวีต',
+      items: [
+        {main:'ไข่ดาว น้ำมันน้อย', alt:'ทางเลือก: ไข่ต้ม', amt:'2 ฟอง'},
+        {main:'เบคอนไก่ / แฮมไก่', alt:'หลีกเลี่ยงเบคอนหมูติดมัน', amt:'3 แผ่น'},
+        {main:'ขนมปังโฮลวีต toast', alt:'ทาอะโวคาโดแทนเนย', amt:'2 แผ่น'},
+      ]
+    },
+    lunch: {
+      name: 'ข้าวกล้อง + หมูย่าง + ผักสด',
+      items: [
+        {main:'หมูย่าง (ไม่ติดมันมาก)', alt:'ทางเลือก: ไก่ย่าง, ปลาทอด (ไม่ชุบแป้ง)', amt:'200g'},
+        {main:'ข้าวกล้อง', alt:'มื้อกลางวัน carb ได้เต็มที่', amt:'1.5 ทัพพี'},
+        {main:'ผักสด + น้ำจิ้มซีฟู้ด', alt:'หรือแตงกวา + มะเขือเทศ', amt:'ข้างจาน'},
+      ]
+    },
+    dinner: {
+      name: 'กุ้งต้ม / กุ้งย่าง + ข้าวกล้อง',
+      items: [
+        {main:'กุ้งต้ม / กุ้งย่าง', alt:'โปรตีนสูง ไขมันต่ำ', amt:'200g (ประมาณ 10 ตัว)'},
+        {main:'ข้าวกล้อง', alt:'ลดได้ถ้าวันออกกำลังกายน้อย', amt:'0.5 ทัพพี'},
+        {main:'ผักนึ่ง + น้ำจิ้มซีฟู้ดพริกน้อย', alt:'หลีกเลี่ยงน้ำจิ้มหวานมาก', amt:'เต็มจาน'},
+      ]
+    }
+  },
+  // 6 = เสาร์ — Flexible day
+  {
+    label: 'วันเสาร์ — Flexible Saturday 🎯',
+    breakfast: {
+      name: 'พาสต้าไข่ดาว / ข้าวกล้อง + ออมเลต',
+      items: [
+        {main:'พาสต้าโฮลวีต / สปาเกตตี้ (ไม่ใส่ซอสครีม)', alt:'ทางเลือก: ข้าวกล้อง 1 ทัพพี', amt:'80g (ดิบ)'},
+        {main:'ออมเลต / ไข่ดาว', alt:'โปรตีนคู่กัน', amt:'2–3 ฟอง'},
+        {main:'ผักสด / มะเขือเทศ', alt:'เพิ่มโดยไม่เพิ่มแคล', amt:'ตามใจ'},
+      ]
+    },
+    lunch: {
+      name: 'อาหารนอกบ้าน — เลือกอย่างฉลาด',
+      items: [
+        {main:'ข้าวกล้อง + อาหารย่าง (grilled)', alt:'เลี่ยงทอด, ผัดน้ำมันเยอะ', amt:'เต็มจาน'},
+        {main:'ซุปใส / แกงไม่ใส่กะทิ', alt:'ต้มยำ, แกงส้ม, ต้มจืด = OK', amt:'1 ชาม'},
+        {main:'ผลไม้ / แตงโม', alt:'ของหวาน = ผลไม้แทนขนม', amt:'1 ส่วน'},
+      ]
+    },
+    dinner: {
+      name: 'ปลากะพงนึ่งมะนาว + ข้าวกล้อง',
+      items: [
+        {main:'ปลากะพงนึ่งมะนาว', alt:'ทางเลือก: ปลาช่อนนึ่ง, ปลาเนื้อขาว', amt:'200g'},
+        {main:'ข้าวกล้อง', alt:'วันสุดท้ายสัปดาห์ carb moderate', amt:'0.5 ทัพพี'},
+        {main:'ผักต้มหลากสี', alt:'บรอกโคลี + แครอท + ข้าวโพดอ่อน', amt:'เต็มจาน'},
+      ]
+    }
+  },
+]
+
+// ======= GENERATE FOOD PLAN (daily rotation) =======
 function generateFoodPlan(r) {
-  const p = r.proteinG, c = r.carbG, f = r.fatG, cal = r.targetCal
+  const p = r.proteinG, c = r.carbG, f = r.fatG
   const breakfast_p = Math.round(p*0.22), breakfast_c = Math.round(c*0.28)
-  const lunch_p = Math.round(p*0.29), lunch_c = Math.round(c*0.32)
-  const dinner_p = Math.round(p*0.31), dinner_c = Math.round(c*0.25)
-  const post_p = Math.round(p*0.18), post_c = Math.round(c*0.15)
+  const lunch_p    = Math.round(p*0.29), lunch_c    = Math.round(c*0.32)
+  const dinner_p   = Math.round(p*0.31), dinner_c   = Math.round(c*0.25)
+  const post_p     = Math.round(p*0.18), post_c     = Math.round(c*0.15)
+
+  const today = new Date()
+  const dayIdx = today.getDay()
+  const menu = DAILY_MENUS[dayIdx]
+  const dayNames = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์']
+  const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
+
+  function mealItems(items) {
+    return items.map(it =>
+      `<div class="food-row"><div><div class="food-main">${it.main}</div><div class="food-alt">${it.alt}</div></div><div class="food-amt">${it.amt}</div></div>`
+    ).join('')
+  }
+
+  // Day navigation chips — show 7 dots, today highlighted
+  const dayDots = dayNames.map((d,i) =>
+    `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;cursor:default;
+      ${i===dayIdx?'background:var(--accent);color:#080b10':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d.slice(0,1)}</span>`
+  ).join('')
 
   return `
+    <div class="card" style="margin-bottom:12px;padding:12px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${menu.label}</div>
+          <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · เมนูหมุนเวียนทุกวัน</div>
+        </div>
+        <div style="font-size:1.4em">🍽️</div>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:nowrap">${dayDots}</div>
+    </div>
+
     <div class="meal-card">
-      <div class="meal-header"><div><div class="meal-name">☀️ มื้อเช้า</div><div class="meal-time">06:30–08:00 น.</div></div><div class="meal-kcal">~${Math.round(breakfast_p*4+breakfast_c*4+f*9*0.2)} kcal</div></div>
+      <div class="meal-header">
+        <div><div class="meal-name">☀️ มื้อเช้า — ${menu.breakfast.name}</div><div class="meal-time">06:30–08:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(breakfast_p*4+breakfast_c*4+f*9*0.2)} kcal</div>
+      </div>
       <div class="macro-chips"><span class="chip p">P ${breakfast_p}g</span><span class="chip c">C ${breakfast_c}g</span></div>
-      <div class="meal-body">
-        <div class="food-row"><div><div class="food-main">ไข่ต้ม / ไข่ดาว</div><div class="food-alt">ทางเลือก: ไข่เจียว, ออมเลต</div></div><div class="food-amt">3 ฟอง</div></div>
-        <div class="food-row"><div><div class="food-main">ข้าวกล้อง</div><div class="food-alt">ทางเลือก: โฮลวีต, โอ๊ตมีล</div></div><div class="food-amt">1 ทัพพี</div></div>
-        <div class="food-row"><div><div class="food-main">ผักต้ม / ลวก</div><div class="food-alt">บรอกโคลี, คะน้า, ถั่วฝักยาว</div></div><div class="food-amt">1 ถ้วย</div></div>
-      </div>
+      <div class="meal-body">${mealItems(menu.breakfast.items)}</div>
     </div>
+
     <div class="meal-card">
-      <div class="meal-header"><div><div class="meal-name">🌤️ มื้อกลางวัน</div><div class="meal-time">12:00–13:00 น.</div></div><div class="meal-kcal">~${Math.round(lunch_p*4+lunch_c*4+f*9*0.35)} kcal</div></div>
+      <div class="meal-header">
+        <div><div class="meal-name">🌤️ มื้อกลางวัน — ${menu.lunch.name}</div><div class="meal-time">12:00–13:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(lunch_p*4+lunch_c*4+f*9*0.35)} kcal</div>
+      </div>
       <div class="macro-chips"><span class="chip p">P ${lunch_p}g</span><span class="chip c">C ${lunch_c}g</span></div>
-      <div class="meal-body">
-        <div class="food-row"><div><div class="food-main">ข้าวกล้อง + เนื้อสัตว์ ${Math.round(lunch_p*0.7)}g</div><div class="food-alt">ไก่ย่าง, หมูนุ่ม, ปลาทู, อกไก่ต้ม</div></div><div class="food-amt">เต็มจาน</div></div>
-        <div class="food-row"><div><div class="food-main">ต้มจืด / แกงส้ม</div><div class="food-alt">ไม่ใส่กะทิ น้ำมันน้อย</div></div><div class="food-amt">1 ชาม</div></div>
-        <div class="food-row"><div><div class="food-main">ผลไม้รสไม่หวาน</div><div class="food-alt">ฝรั่ง, มะละกอ, แตงโม</div></div><div class="food-amt">1 ส่วน</div></div>
-      </div>
+      <div class="meal-body">${mealItems(menu.lunch.items)}</div>
     </div>
+
     <div class="meal-card">
-      <div class="meal-header"><div><div class="meal-name">🌙 มื้อเย็น</div><div class="meal-time">17:30–19:00 น.</div></div><div class="meal-kcal">~${Math.round(dinner_p*4+dinner_c*4+f*9*0.35)} kcal</div></div>
+      <div class="meal-header">
+        <div><div class="meal-name">🌙 มื้อเย็น — ${menu.dinner.name}</div><div class="meal-time">17:30–19:00 น.</div></div>
+        <div class="meal-kcal">~${Math.round(dinner_p*4+dinner_c*4+f*9*0.35)} kcal</div>
+      </div>
       <div class="macro-chips"><span class="chip p">P ${dinner_p}g</span><span class="chip c">C ${dinner_c}g</span></div>
-      <div class="meal-body">
-        <div class="food-row"><div><div class="food-main">ปลานึ่ง / อกไก่อบ / กุ้งต้ม</div><div class="food-alt">เนื้อสัตว์ไม่ติดมัน</div></div><div class="food-amt">200g</div></div>
-        <div class="food-row"><div><div class="food-main">ข้าวกล้องครึ่งทัพพี</div><div class="food-alt">วันพักลดได้, วันหนักเพิ่มได้</div></div><div class="food-amt">~50g</div></div>
-        <div class="food-row"><div><div class="food-main">ผักเยอะ ๆ</div><div class="food-alt">ผักบุ้ง, บรอกโคลี, แตงกวา</div></div><div class="food-amt">มากเท่าไหร่ยิ่งดี</div></div>
-      </div>
+      <div class="meal-body">${mealItems(menu.dinner.items)}</div>
     </div>
+
     <div class="meal-card">
-      <div class="meal-header"><div><div class="meal-name">🥛 Post-Workout</div><div class="meal-time">ภายใน 30 นาที</div></div><div class="meal-kcal">~${Math.round(post_p*4+post_c*4)} kcal</div></div>
+      <div class="meal-header">
+        <div><div class="meal-name">🥛 Post-Workout</div><div class="meal-time">ภายใน 30 นาทีหลังออกกำลังกาย</div></div>
+        <div class="meal-kcal">~${Math.round(post_p*4+post_c*4)} kcal</div>
+      </div>
       <div class="macro-chips"><span class="chip p">P ${post_p}g</span><span class="chip c">C ${post_c}g</span></div>
       <div class="meal-body">
         <div class="food-row"><div><div class="food-main">Whey Protein</div><div class="food-alt">ทางเลือก: นมจืดพร่องมัน 2 กล่อง</div></div><div class="food-amt">1 scoop</div></div>
-        <div class="food-row"><div><div class="food-main">กล้วยหอม</div><div class="food-alt">ทางเลือก: ข้าว 1/2 ทัพพี</div></div><div class="food-amt">1 ลูก</div></div>
+        <div class="food-row"><div><div class="food-main">กล้วยหอม</div><div class="food-alt">ทางเลือก: ข้าว 0.5 ทัพพี</div></div><div class="food-amt">1 ลูก</div></div>
       </div>
     </div>
+
     <div class="card"><div class="card-title"><span class="dot" style="background:var(--red)"></span>ของที่ต้องหลีกเลี่ยง</div>
       <div class="info-box ib-r"><strong>เครื่องดื่ม & อาหาร</strong>น้ำหวาน · น้ำอัดลม · เบียร์/เหล้า · กาแฟน้ำตาล · ของทอด · ขนมหวาน · Fast Food</div>
+    </div>
+
+    <!-- COMING SOON: Food Camera -->
+    <div class="card" style="border:1px dashed rgba(45,212,191,.3);background:rgba(45,212,191,.04);text-align:center;padding:20px 16px">
+      <div style="font-size:2.2em;margin-bottom:8px">📸</div>
+      <div style="display:inline-block;font-family:var(--font-m);font-size:.58em;padding:2px 10px;border-radius:20px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);margin-bottom:8px">COMING SOON</div>
+      <div style="font-family:var(--font-d);font-size:1.2em;color:var(--accent);margin-bottom:6px">ถ่ายรูปอาหาร → นับแคลอรี่</div>
+      <div style="font-size:.72em;color:var(--muted);line-height:1.7">ถ่ายรูปจานอาหารของคุณ<br>AI วิเคราะห์แคลอรี่ + โปรตีน + คาร์บ<br>อัตโนมัติด้วย Gemini Vision</div>
     </div>`
 }
 
@@ -577,6 +1036,65 @@ function switchTab(id, el) {
   document.getElementById('tab-'+id).classList.add('active')
   el.classList.add('active')
   window.scrollTo({top:0,behavior:'smooth'})
+}
+
+// ======= PROGRESS TOAST =======
+// steps: [{icon, label}], currentStep: 0-based index
+function showProgress(steps, currentStep, statusText) {
+  const toast = document.getElementById('progress-toast')
+  const stepsRow = document.getElementById('prog-steps-row')
+  const fill = document.getElementById('prog-fill')
+  const statusEl = document.getElementById('prog-status-text')
+  const spinner = document.getElementById('prog-spinner')
+
+  stepsRow.innerHTML = steps.map((s, i) => {
+    const isDone = i < currentStep
+    const isActive = i === currentStep
+    const cls = isDone ? 'done' : isActive ? 'active' : ''
+    const lineHtml = i < steps.length - 1
+      ? `<div class="prog-step-line"></div>`
+      : ''
+    return `<div class="prog-step ${cls}">
+      <div class="prog-step-wrap">
+        <div class="prog-step-dot">${isDone ? '✓' : s.icon}</div>
+        <div class="prog-step-label">${s.label}</div>
+      </div>
+      ${lineHtml}
+    </div>`
+  }).join('')
+
+  const pct = steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0
+  fill.style.width = pct + '%'
+  statusEl.textContent = statusText || steps[currentStep]?.label || 'กำลังประมวลผล...'
+  spinner.style.display = currentStep < steps.length - 1 ? 'block' : 'none'
+
+  toast.classList.add('open')
+}
+
+function updateProgress(currentStep, statusText) {
+  const steps = document.querySelectorAll('#prog-steps-row .prog-step')
+  const fill = document.getElementById('prog-fill')
+  const statusEl = document.getElementById('prog-status-text')
+  const spinner = document.getElementById('prog-spinner')
+
+  steps.forEach((el, i) => {
+    el.classList.remove('done', 'active')
+    if (i < currentStep) el.classList.add('done')
+    else if (i === currentStep) el.classList.add('active')
+    const dot = el.querySelector('.prog-step-dot')
+    if (i < currentStep) dot.textContent = '✓'
+  })
+
+  const pct = steps.length > 1 ? Math.round((currentStep / (steps.length - 1)) * 100) : 0
+  fill.style.width = pct + '%'
+  if (statusText) statusEl.textContent = statusText
+  spinner.style.display = currentStep < steps.length - 1 ? 'block' : 'none'
+}
+
+function hideProgress(delay = 1800) {
+  setTimeout(() => {
+    document.getElementById('progress-toast').classList.remove('open')
+  }, delay)
 }
 
 // ======= AUTH + LOAD =======
