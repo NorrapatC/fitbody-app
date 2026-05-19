@@ -54,6 +54,13 @@ const SPORT_TH: Record<string, string> = {
   hyrox: 'Hyrox',
   football: 'ฟุตบอล',
   muaythai: 'มวยไทย',
+  yoga: 'โยคะ',
+  crossfit: 'CrossFit',
+  boxing: 'มวย',
+  tennis: 'เทนนิส',
+  basketball: 'บาสเกตบอล',
+  volleyball: 'วอลเลย์บอล',
+  rowing: 'พายเรือ',
 }
 
 function sanitizeMealPlan(raw: unknown): MealPlan | null {
@@ -120,9 +127,14 @@ serve(async (req) => {
     const body = await req.json()
     const { proteinG, carbG, fatG, targetCal, goal, sports, dayOfWeek } = body
 
-    if (!proteinG || !carbG || !targetCal) {
+    const rawProtein = Number(proteinG), rawCarb = Number(carbG), rawFat = Number(fatG), rawCal = Number(targetCal)
+    if (!rawProtein || !rawCarb || !rawCal || !isFinite(rawProtein) || !isFinite(rawCarb) || !isFinite(rawCal)) {
       return new Response(JSON.stringify({ error: 'MISSING_PARAMS' }), { status: 400, headers: cors })
     }
+    const safeProtein = Math.min(Math.max(rawProtein, 1), 500)
+    const safeCarb    = Math.min(Math.max(rawCarb, 1), 800)
+    const safeFat     = Math.min(Math.max(isFinite(rawFat) ? rawFat : 0, 0), 200)
+    const safeCal     = Math.min(Math.max(rawCal, 1000), 5000)
 
     const dayIdx = typeof dayOfWeek === 'number' && dayOfWeek >= 0 && dayOfWeek <= 6
       ? dayOfWeek
@@ -130,14 +142,17 @@ serve(async (req) => {
 
     const goalTh = GOAL_TH[goal] || 'รักษาน้ำหนัก'
     const sportsTh = Array.isArray(sports) && sports.length > 0
-      ? sports.map((s: string) => SPORT_TH[s] || s).join(', ')
+      ? sports
+          .filter((s: string) => s in SPORT_TH)
+          .map((s: string) => SPORT_TH[s])
+          .join(', ') || 'ออกกำลังกายทั่วไป'
       : 'ออกกำลังกายทั่วไป'
     const dayTh = DAY_NAMES_TH[dayIdx]
 
     const prompt = `คุณเป็น AI โค้ชโภชนาการชาวไทย เชี่ยวชาญด้านอาหารไทยสำหรับนักกีฬา
 สร้างแผนอาหารไทยประจำวัน${dayTh}สำหรับผู้ใช้ที่มีเป้าหมาย: ${goalTh}
 กีฬาที่เล่น: ${sportsTh}
-เป้าหมายสารอาหาร: โปรตีน ${proteinG}g | คาร์บ ${carbG}g | ไขมัน ${fatG}g | รวม ${targetCal} kcal/วัน
+เป้าหมายสารอาหาร: โปรตีน ${safeProtein}g | คาร์บ ${safeCarb}g | ไขมัน ${safeFat}g | รวม ${safeCal} kcal/วัน
 
 ตอบเป็น JSON เท่านั้น ไม่ต้องอธิบายเพิ่ม รูปแบบ:
 {
@@ -162,7 +177,7 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 1024 }
+          generationConfig: { temperature: 0.9, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } }
         })
       }
     )
@@ -177,7 +192,9 @@ serve(async (req) => {
       )
     }
 
-    const text = candidate.content.parts[0].text
+    const parts = candidate.content.parts || []
+    const textPart = parts.find((p: Record<string,unknown>) => !p.thought && typeof p.text === 'string') || parts[0]
+    const text = (textPart?.text as string) || ''
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: 'NO_JSON' }), { status: 422, headers: cors })

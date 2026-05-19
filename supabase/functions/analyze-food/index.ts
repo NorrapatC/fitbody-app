@@ -59,6 +59,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: cors })
   }
   const jwt = authHeader.replace('Bearer ', '')
+  if (jwt === Deno.env.get('SUPABASE_ANON_KEY')) {
+    return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: cors })
+  }
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
   const { data: { user }, error: authError } = await adminClient.auth.getUser(jwt)
   if (authError || !user) {
@@ -107,7 +110,7 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          generationConfig: { temperature: 0.2, maxOutputTokens: 300 }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 512, thinkingConfig: { thinkingBudget: 0 } }
         })
       }
     )
@@ -119,7 +122,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'BLOCKED', reason: candidate?.finishReason ?? 'no candidate' }), { status: 422, headers: cors })
     }
 
-    const text = candidate.content.parts[0].text
+    const parts = candidate.content.parts || []
+    const textPart = parts.find((p: Record<string,unknown>) => !p.thought && typeof p.text === 'string') || parts[0]
+    const text = (textPart?.text as string) || ''
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: 'NO_JSON' }), { status: 422, headers: cors })

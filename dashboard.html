@@ -9,9 +9,7 @@
 <script src="js/config.js"></script>
 <!-- Reuse all styles from v3 but add user-specific overrides -->
 <style>
-:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent-hover:#20bfad;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#8b95a8;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
-[data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
-[data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
+:root{--bg:#07050e;--surface:#0e0b1c;--surface2:#150f28;--surface3:#1b1435;--border:rgba(168,85,247,.13);--accent:#a855f7;--accent-hover:#9333ea;--accent2:#f472b6;--accent3:#34d399;--accent4:#60a5fa;--accent5:#fb923c;--text:#ede9ff;--muted:#8b7fad;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 button,a,label[onclick],label[for]{touch-action:manipulation}
 html{-webkit-text-size-adjust:100%}
@@ -27,7 +25,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 @keyframes loading{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
 
 /* TOPBAR */
-.topbar{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.topbar{position:sticky;top:0;z-index:100;background:rgba(7,5,14,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
 .topbar-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .topbar h1{font-family:var(--font-d);font-size:1.3em;letter-spacing:.05em;color:var(--accent)}
 .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:.78em;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0}
@@ -35,15 +33,35 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 @media(max-width:360px){.topbar-btn{padding:6px 8px;font-size:.68em}}
 .topbar-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-size:.72em;cursor:pointer;font-family:var(--font-b);white-space:nowrap;text-decoration:none;touch-action:manipulation}
-.topbar-btn.primary{background:var(--accent);color:#080b10;border-color:var(--accent)}
+.topbar-btn.primary{background:var(--accent);color:#07050e;border-color:var(--accent)}
 
 /* HERO */
 .hero{padding:clamp(20px,4vw,36px) 14px 20px;position:relative;overflow:hidden}
-.hero-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:min(600px,150%);height:280px;background:radial-gradient(ellipse,rgba(45,212,191,.1) 0%,transparent 70%);pointer-events:none}
-.user-greeting{font-size:clamp(.8em,1.5vw+.5em,.9em);color:var(--muted);font-family:var(--font-m);letter-spacing:.06em;margin-bottom:4px}
-.user-name{font-family:var(--font-d);font-size:clamp(2em,6vw,3.5em);line-height:1;margin-bottom:6px}
+.hero-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:min(600px,150%);height:300px;background:radial-gradient(ellipse,rgba(168,85,247,.18) 0%,rgba(168,85,247,.05) 45%,transparent 70%);pointer-events:none}
+.user-greeting{font-size:clamp(.8em,1.5vw+.5em,.9em);color:var(--muted);font-family:var(--font-m);letter-spacing:.06em;margin-bottom:6px}
+.hero-name-row{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.hero-avatar-lg{width:72px;height:72px;border-radius:50%;background:var(--surface2);border:2.5px solid var(--accent);box-shadow:0 0 22px rgba(168,85,247,.4),0 0 6px rgba(168,85,247,.2) inset;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:1.7em;color:var(--accent);overflow:hidden;flex-shrink:0;cursor:pointer;transition:box-shadow .3s,transform .25s;animation:avatarPop .5s cubic-bezier(.34,1.56,.64,1) both}
+.hero-avatar-lg:hover{box-shadow:0 0 36px rgba(168,85,247,.65),0 0 10px rgba(168,85,247,.3) inset;transform:scale(1.06)}
+.hero-avatar-lg img{width:100%;height:100%;object-fit:cover}
+@keyframes avatarPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.user-name{font-family:var(--font-d);font-size:clamp(2em,6vw,3.5em);line-height:1}
 .user-name span{color:var(--accent)}
 .hero-sub{font-size:.76em;color:var(--muted)}
+
+/* RING GLOW */
+.diary-cal-ring svg{filter:drop-shadow(0 0 14px rgba(168,85,247,.35))}
+.diary-macro-ring-row:nth-child(1) .diary-mini-ring svg{filter:drop-shadow(0 0 8px rgba(52,211,153,.45))}
+.diary-macro-ring-row:nth-child(2) .diary-mini-ring svg{filter:drop-shadow(0 0 8px rgba(96,165,250,.45))}
+.diary-macro-ring-row:nth-child(3) .diary-mini-ring svg{filter:drop-shadow(0 0 8px rgba(244,114,182,.45))}
+
+/* PROGRESS BAR SHIMMER */
+.prog-fill{overflow:hidden;position:relative}
+.prog-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.22) 50%,transparent 100%);transform:translateX(-100%);animation:shimmer 2.6s ease-in-out infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+
+/* WATER BAR SPECIAL */
+.water-bar{background:linear-gradient(90deg,var(--accent4),rgba(96,165,250,.7));background-size:200% 100%;animation:waterFlow 3s linear infinite}
+@keyframes waterFlow{0%{background-position:100% 0}100%{background-position:-100% 0}}
 
 /* NO DATA STATE */
 #no-data{padding:0 14px 80px}
@@ -51,7 +69,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .empty-icon{font-size:3em;margin-bottom:14px}
 .empty-title{font-family:var(--font-d);font-size:1.6em;color:var(--accent);margin-bottom:8px}
 .empty-sub{font-size:.8em;color:var(--muted);line-height:1.7;margin-bottom:24px}
-.btn-start{display:inline-block;background:var(--accent);color:#080b10;padding:14px 28px;border-radius:12px;font-weight:700;font-size:.9em;text-decoration:none;transition:all .2s}
+.btn-start{display:inline-block;background:var(--accent);color:#07050e;padding:14px 28px;border-radius:12px;font-weight:700;font-size:.9em;text-decoration:none;transition:all .2s}
 .btn-start:hover{background:var(--accent-hover);transform:translateY(-1px)}
 
 /* STATS */
@@ -79,10 +97,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* NAV */
 .nav-wrap{padding:0 14px;margin-bottom:14px;position:sticky;top:53px;z-index:90}
-.nav-inner{background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r);padding:5px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.nav-inner{background:rgba(7,5,14,.93);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r);padding:5px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .nav-inner::-webkit-scrollbar{display:none}
 .nav-btn{flex-shrink:0;padding:8px 16px;border-radius:20px;border:none;background:transparent;color:var(--muted);font-family:var(--font-b);font-size:clamp(.74em,.9vw+.5em,.84em);font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;touch-action:manipulation}
-.nav-btn.active{background:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.3)}
+.nav-btn.active{background:var(--accent);color:#07050e;box-shadow:0 0 16px rgba(168,85,247,.45)}
 
 /* PANEL */
 .panel{display:none;padding:0 14px 100px;animation:fadeUp .25s ease}
@@ -157,7 +175,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 /* BADGE/TIPS */
 .badge{display:inline-block;font-family:var(--font-m);font-size:.6em;padding:2px 8px;border-radius:6px}
-.badge-y{background:rgba(45,212,191,.12);color:var(--accent)}
+.badge-y{background:rgba(168,85,247,.12);color:var(--accent)}
 .badge-g{background:rgba(74,222,128,.12);color:var(--accent3)}
 .badge-b{background:rgba(96,165,250,.12);color:var(--accent4)}
 .badge-o{background:rgba(255,107,53,.12);color:var(--accent2)}
@@ -166,7 +184,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
 .info-box{border-radius:10px;padding:10px 14px;margin-bottom:10px;border-left:3px solid;font-size:.76em;line-height:1.7}
 .info-box strong{display:block;font-family:var(--font-m);font-size:.8em;letter-spacing:.08em;margin-bottom:3px;text-transform:uppercase}
-.ib-y{background:rgba(45,212,191,.07);border-color:var(--accent);color:#0d9488}
+.ib-y{background:rgba(168,85,247,.07);border-color:var(--accent);color:#0d9488}
 .ib-g{background:rgba(74,222,128,.07);border-color:var(--accent3);color:var(--accent3)}
 .ib-r{background:rgba(248,113,113,.07);border-color:var(--red);color:var(--red)}
 .ib-b{background:rgba(96,165,250,.07);border-color:var(--accent4);color:var(--accent4)}
@@ -201,9 +219,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .modal-instructions{padding:0 20px;margin-bottom:14px}
 .modal-instructions h4{font-size:.7em;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:var(--font-m);margin-bottom:8px}
 .step-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px}
-.step-num{width:20px;height:20px;border-radius:5px;background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.62em;color:var(--accent);flex-shrink:0;margin-top:1px}
+.step-num{width:20px;height:20px;border-radius:5px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.62em;color:var(--accent);flex-shrink:0;margin-top:1px}
 .step-text{font-size:.76em;color:var(--text);line-height:1.6}
-.modal-tip{margin:0 20px 20px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);border-radius:10px;padding:10px 14px;font-size:.72em;color:#0d9488;line-height:1.7}
+.modal-tip{margin:0 20px 20px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:10px 14px;font-size:.72em;color:#0d9488;line-height:1.7}
 .modal-tip strong{display:block;font-family:var(--font-m);font-size:.82em;letter-spacing:.08em;margin-bottom:4px}
 
 ::-webkit-scrollbar{width:3px;height:3px}
@@ -237,8 +255,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 #sports-modal.open{display:flex;animation:fadeOverlay .2s ease}
 .sports-sheet{background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.2,1,.3,1);padding-bottom:env(safe-area-inset-bottom,20px)}
 .sport-tag{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.8em;cursor:pointer;transition:all .18s;margin:4px}
-.sport-tag.active{border-color:var(--accent);background:rgba(45,212,191,.1);color:var(--accent)}
-.sports-current-tag{display:inline-flex;align-items:center;gap:4px;font-size:.72em;padding:4px 10px;border-radius:12px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.2);color:var(--accent);font-family:var(--font-b);margin:2px}
+.sport-tag.active{border-color:var(--accent);background:rgba(168,85,247,.1);color:var(--accent)}
+.sports-current-tag{display:inline-flex;align-items:center;gap:4px;font-size:.72em;padding:4px 10px;border-radius:12px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);color:var(--accent);font-family:var(--font-b);margin:2px}
 
 /* PROFILE EDITOR MODAL */
 #profile-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:1100;display:none;align-items:flex-end;justify-content:center}
@@ -248,7 +266,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .avatar-large:hover{opacity:.85}
 .avatar-large img{width:100%;height:100%;object-fit:cover}
 .profile-input{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:1em;outline:none;transition:border-color .2s}
-.profile-input:focus{border-color:rgba(45,212,191,.4)}
+.profile-input:focus{border-color:rgba(168,85,247,.4)}
 .upload-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;transition:all .18s;margin-top:10px}
 .upload-btn:hover{border-color:var(--accent);color:var(--accent)}
 
@@ -260,8 +278,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .progress-steps::-webkit-scrollbar{display:none}
 .prog-step{display:flex;align-items:center;flex-shrink:0}
 .prog-step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;font-family:var(--font-m);border:2px solid var(--border);background:var(--surface2);color:var(--muted);transition:all .3s;flex-shrink:0}
-.prog-step.done .prog-step-dot{background:var(--accent3);border-color:var(--accent3);color:#080b10}
-.prog-step.active .prog-step-dot{background:var(--accent);border-color:var(--accent);color:#080b10;box-shadow:0 0 12px rgba(45,212,191,.4)}
+.prog-step.done .prog-step-dot{background:var(--accent3);border-color:var(--accent3);color:#07050e}
+.prog-step.active .prog-step-dot{background:var(--accent);border-color:var(--accent);color:#07050e;box-shadow:0 0 12px rgba(168,85,247,.4)}
 .prog-step-line{width:20px;height:2px;background:var(--border);flex-shrink:0;transition:background .3s}
 .prog-step.done + .prog-step .prog-step-line,.prog-step.done .prog-step-line{background:var(--accent3)}
 .prog-step-label{font-size:.6em;color:var(--muted);font-family:var(--font-m);margin-top:3px;text-align:center;white-space:nowrap}
@@ -271,7 +289,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 .prog-track-bar{height:3px;background:rgba(255,255,255,.06);border-radius:10px;overflow:hidden;margin-bottom:8px}
 .prog-track-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:10px;transition:width .5s ease}
 .prog-status-text{font-size:.66em;color:var(--muted);font-family:var(--font-m);display:flex;align-items:center;gap:6px}
-.prog-spinner{width:10px;height:10px;border:2px solid rgba(45,212,191,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.prog-spinner{width:10px;height:10px;border:2px solid rgba(168,85,247,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ============================
@@ -336,7 +354,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 <div class="hero" id="hero" style="display:none">
   <div class="hero-glow"></div>
   <div class="user-greeting" id="greeting">สวัสดี</div>
-  <div class="user-name" id="user-name">LOADING...</div>
+  <div class="hero-name-row">
+    <div class="hero-avatar-lg" id="hero-avatar-lg" onclick="openProfileEditor()" title="แก้ไขโปรไฟล์">?</div>
+    <div class="user-name" id="user-name">LOADING...</div>
+  </div>
   <div class="hero-sub" id="hero-sub"></div>
 </div>
 
@@ -403,7 +424,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
     <div class="modal-drag"></div>
     <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
       <div style="font-family:var(--font-d);font-size:1.5em;letter-spacing:.04em">โปรไฟล์</div>
-      <button onclick="closeProfileEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      <button onclick="closeProfileEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:40px;height:40px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="ปิดหน้าต่างแก้ไขโปรไฟล์">✕</button>
     </div>
     <div style="padding:20px 20px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
       <div class="avatar-large" id="profile-avatar-preview" onclick="document.getElementById('avatar-file-input').click()">?</div>
@@ -422,7 +443,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       </div>
       <div style="display:flex;gap:10px">
         <button onclick="closeProfileEditor()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.82em;cursor:pointer">ยกเลิก</button>
-        <button onclick="saveProfile()" id="save-profile-btn" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
+        <button onclick="saveProfile()" id="save-profile-btn" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#07050e;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
       </div>
     </div>
   </div>
@@ -437,13 +458,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
         <div style="font-family:var(--font-d);font-size:1.5em;letter-spacing:.04em">แก้ไขกีฬาที่สนใจ</div>
         <div style="font-size:.68em;color:var(--muted);margin-top:3px;font-family:var(--font-m)">เลือกได้หลายอย่าง — แผนออกกำลังกายจะอัปเดตทันที</div>
       </div>
-      <button onclick="closeSportsEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+      <button onclick="closeSportsEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:40px;height:40px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" aria-label="ปิดหน้าต่างแก้ไขกีฬา">✕</button>
     </div>
     <div id="sports-tags-wrap" style="padding:16px 16px 8px;display:flex;flex-wrap:wrap"></div>
     <div id="sports-save-status" style="display:none;margin:0 20px 8px;font-size:.72em;padding:6px 10px;border-radius:8px;font-family:var(--font-m)"></div>
     <div style="padding:8px 20px 16px;display:flex;gap:10px">
       <button onclick="closeSportsEditor()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.82em;cursor:pointer">ยกเลิก</button>
-      <button onclick="saveSports()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
+      <button onclick="saveSports()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#07050e;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
     </div>
   </div>
 </div>
@@ -453,7 +474,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 const { createClient } = supabase
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
-let todayLogs = [], diaryMealType = 'breakfast'
+let todayLogs = [], diaryMealType = 'breakfast', diaryLoading = false
 let editSports = []
 let wtFreq = 3
 let pendingAvatarFile = null
@@ -604,7 +625,7 @@ const EXERCISES = {
 }
 
 // ======= MUSCLE SVG =======
-function getMC(m,p){const c={chest:p?'#60a5fa':'rgba(96,165,250,0.35)',back:p?'#4ade80':'rgba(74,222,128,0.35)',shoulder:p?'#e879f9':'rgba(232,121,249,0.35)',arm:p?'#2dd4bf':'rgba(45,212,191,0.35)',tricep:p?'#2dd4bf':'rgba(45,212,191,0.35)',core:p?'#ff6b35':'rgba(255,107,53,0.35)',leg:p?'#f87171':'rgba(248,113,113,0.35)',glute:p?'#a78bfa':'rgba(167,139,250,0.35)',calf:p?'#34d399':'rgba(52,211,153,0.35)',full:p?'#fbbf24':'rgba(251,191,36,0.35)'};return c[m]||'rgba(255,255,255,0.1)'}
+function getMC(m,p){const c={chest:p?'#60a5fa':'rgba(96,165,250,0.35)',back:p?'#4ade80':'rgba(74,222,128,0.35)',shoulder:p?'#e879f9':'rgba(232,121,249,0.35)',arm:p?'#2dd4bf':'rgba(168,85,247,0.35)',tricep:p?'#2dd4bf':'rgba(168,85,247,0.35)',core:p?'#ff6b35':'rgba(255,107,53,0.35)',leg:p?'#f87171':'rgba(248,113,113,0.35)',glute:p?'#a78bfa':'rgba(167,139,250,0.35)',calf:p?'#34d399':'rgba(52,211,153,0.35)',full:p?'#fbbf24':'rgba(251,191,36,0.35)'};return c[m]||'rgba(255,255,255,0.1)'}
 function buildSVG(prim,sec){
   const a={chest:'rgba(255,255,255,0.05)',shoulder:'rgba(255,255,255,0.05)',arm:'rgba(255,255,255,0.05)',tricep:'rgba(255,255,255,0.05)',back:'rgba(255,255,255,0.05)',core:'rgba(255,255,255,0.05)',leg:'rgba(255,255,255,0.05)',glute:'rgba(255,255,255,0.05)',calf:'rgba(255,255,255,0.05)',full:'rgba(255,255,255,0.05)'}
   prim.forEach(m=>{a[m]=getMC(m,true);if(m==='full')Object.keys(a).forEach(k=>a[k]=getMC('full',true))})
@@ -657,7 +678,7 @@ function buildExList(keys){
   return keys.map(k=>{
     const ex=EXERCISES[k];if(!ex)return''
     const chips=ex.primary.map(m=>`<span class="ex-chip ec-${m}">${mLabel(m)}</span>`).join('')
-    return `<div class="ex-row" onclick="openModal('${k}')">
+    return `<div class="ex-row" role="button" tabindex="0" onclick="openModal('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openModal('${k}')}">
       <div class="ex-thumb">${getIcon(k)}</div>
       <div class="ex-info">
         <div class="ex-name">${ex.name}</div>
@@ -1044,8 +1065,8 @@ function generateWorkoutPlan(sports, goal, cr, freq) {
     const blocks = dayBlocks[d]
     const first = blocks && blocks[0]
     const icon = first ? (first.title.match(/^\S+/)||['💪'])[0] : '😴'
-    const border = isActive ? 'border:2px solid var(--accent);background:rgba(45,212,191,.07)' : 'border:1px solid var(--border)'
-    return `<div class="day-card" style="${border};cursor:pointer;transition:all .15s;position:relative" onclick="switchDayTab('${d}',this)">
+    const border = isActive ? 'border:2px solid var(--accent);background:rgba(168,85,247,.07)' : 'border:1px solid var(--border)'
+    return `<div class="day-card" role="button" tabindex="0" style="${border};cursor:pointer;transition:all .15s;position:relative" onclick="switchDayTab('${d}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchDayTab('${d}',this)}">
       ${isActive ? `<div style="position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--accent)"></div>` : ''}
       <div class="day-name" style="${isActive ? 'color:var(--accent)' : ''}">${d}</div>
       <div class="day-icon">${icon}</div>
@@ -1098,7 +1119,7 @@ function generateWorkoutPlan(sports, goal, cr, freq) {
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${[2,3,4,5].map(n => {
           const active = f === n
-          return `<button onclick="setWtFreq(${n})" style="padding:6px 12px;border-radius:20px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(45,212,191,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.72em;cursor:pointer;transition:all .18s;white-space:nowrap">${freqLabels[n]}</button>`
+          return `<button onclick="setWtFreq(${n})" style="padding:6px 12px;border-radius:20px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(168,85,247,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.72em;cursor:pointer;transition:all .18s;white-space:nowrap">${freqLabels[n]}</button>`
         }).join('')}
       </div>
     </div>` : ''
@@ -1138,7 +1159,7 @@ function switchDayTab(day, clickedEl) {
   })
   if (clickedEl) {
     clickedEl.style.border = '2px solid var(--accent)'
-    clickedEl.style.background = 'rgba(45,212,191,.07)'
+    clickedEl.style.background = 'rgba(168,85,247,.07)'
   }
 }
 
@@ -1240,16 +1261,20 @@ async function saveProfile() {
     await sb.auth.updateUser({ data: { full_name: name, avatar_url: avatarUrl } })
     userProfile = { ...userProfile, name, avatar_url: avatarUrl }
 
-    // Update topbar avatar
+    // Update topbar + hero avatar
     const avatarEl = document.getElementById('user-avatar')
+    const heroAv = document.getElementById('hero-avatar-lg')
+    const initial = (name || currentUser.email || '?')[0].toUpperCase()
     if (avatarUrl) {
       const img = document.createElement('img')
-      img.src = avatarUrl
-      img.alt = 'avatar'
-      avatarEl.textContent = ''
-      avatarEl.appendChild(img)
+      img.src = avatarUrl; img.alt = 'avatar'
+      avatarEl.textContent = ''; avatarEl.appendChild(img)
+      const imgH = document.createElement('img')
+      imgH.src = avatarUrl; imgH.alt = 'avatar'
+      if (heroAv) { heroAv.textContent = ''; heroAv.appendChild(imgH) }
     } else {
-      avatarEl.textContent = (name || currentUser.email || '?')[0].toUpperCase()
+      avatarEl.textContent = initial
+      if (heroAv) heroAv.textContent = initial
     }
 
     // Update greeting name
@@ -1278,13 +1303,21 @@ async function saveProfile() {
 // ======= WORKOUT FREQUENCY =======
 async function setWtFreq(n) {
   if (!currentUser || ![2,3,4,5].includes(n)) return
+  const prev = wtFreq
   wtFreq = n
   userProfile = { ...userProfile, wt_freq: n }
   const exPanel = document.getElementById('tab-exercise')
   if (exPanel && calcData) {
     exPanel.innerHTML = generateWorkoutPlan(userProfile?.sports || [], calcData?.goal, calcData, n)
   }
-  await sb.from('profiles').update({ wt_freq: n }).eq('id', currentUser.id)
+  const { error } = await sb.from('profiles').update({ wt_freq: n }).eq('id', currentUser.id)
+  if (error) {
+    wtFreq = prev
+    userProfile = { ...userProfile, wt_freq: prev }
+    if (exPanel && calcData) {
+      exPanel.innerHTML = generateWorkoutPlan(userProfile?.sports || [], calcData?.goal, calcData, prev)
+    }
+  }
 }
 
 // ======= SPORTS EDITOR =======
@@ -1330,22 +1363,22 @@ async function saveSports() {
   btn.disabled = true
   statusEl.style.display = 'none'
 
-  const { error } = await sb.from('profiles').update({ sports: editSports }).eq('id', currentUser.id)
-  btn.textContent = orig
-  btn.disabled = false
-
-  if (error) {
-    statusEl.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + error.message
-    statusEl.style.cssText = 'display:block;margin:0 20px 8px;font-size:.72em;padding:6px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
-    return
-  }
-  userProfile = { ...userProfile, sports: editSports }
-  closeSportsEditor()
-
-  // Re-render exercise panel immediately
-  const exPanel = document.getElementById('tab-exercise')
-  if (exPanel && calcData) {
-    exPanel.innerHTML = generateWorkoutPlan(editSports, calcData.goal, calcData, wtFreq)
+  try {
+    const { error } = await sb.from('profiles').update({ sports: editSports }).eq('id', currentUser.id)
+    if (error) {
+      statusEl.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + error.message
+      statusEl.style.cssText = 'display:block;margin:0 20px 8px;font-size:.72em;padding:6px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
+      return
+    }
+    userProfile = { ...userProfile, sports: editSports }
+    closeSportsEditor()
+    const exPanel = document.getElementById('tab-exercise')
+    if (exPanel && calcData) {
+      exPanel.innerHTML = generateWorkoutPlan(editSports, calcData.goal, calcData, wtFreq)
+    }
+  } finally {
+    btn.textContent = orig
+    btn.disabled = false
   }
 }
 
@@ -1562,17 +1595,17 @@ function _dayDotsHTML(dayIdx) {
   const dayNames = ['อา','จ','อ','พ','พฤ','ศ','ส']
   return dayNames.map((d,i) =>
     `<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:.56em;font-family:var(--font-m);font-weight:700;
-      ${i===dayIdx?'background:var(--accent);color:#080b10':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d}</span>`
+      ${i===dayIdx?'background:var(--accent);color:#07050e':'background:var(--surface2);color:var(--muted);border:1px solid var(--border)'}">${d}</span>`
   ).join('')
 }
 
 // Render a meal plan object (from AI or fallback) into HTML
 function renderMealPlanHTML(plan, r) {
   const p = r.proteinG, c = r.carbG, f = r.fatG
-  const bp = Math.round(p*0.22), bc = Math.round(c*0.28)
-  const lp = Math.round(p*0.29), lc = Math.round(c*0.32)
-  const dp = Math.round(p*0.31), dc = Math.round(c*0.25)
-  const pp = Math.round(p*0.18), pc = Math.round(c*0.15)
+  const bp = Math.round(p*0.22), bc = Math.round(c*0.28), bf = Math.round(f*0.20)
+  const lp = Math.round(p*0.29), lc = Math.round(c*0.32), lf = Math.round(f*0.35)
+  const dp = Math.round(p*0.31), dc = Math.round(c*0.25), df = Math.round(f*0.35)
+  const pp = Math.round(p*0.18), pc = Math.round(c*0.15), pf = Math.round(f*0.10)
 
   const today = new Date()
   const dateStr = today.toLocaleDateString('th-TH',{day:'numeric',month:'long'})
@@ -1584,7 +1617,7 @@ function renderMealPlanHTML(plan, r) {
           <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${escHtml(plan.day_label||'เมนูวันนี้')}</div>
           <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · สร้างโดย AI Gemini</div>
         </div>
-        <button onclick="regenerateMealPlan()" style="background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);border-radius:8px;padding:5px 10px;font-size:.64em;color:var(--accent);cursor:pointer;font-family:var(--font-m)">🔄 เมนูใหม่</button>
+        <button onclick="regenerateMealPlan()" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:5px 10px;font-size:.64em;color:var(--accent);cursor:pointer;font-family:var(--font-m)">🔄 เมนูใหม่</button>
       </div>
       <div style="display:flex;gap:4px;flex-wrap:nowrap">${_dayDotsHTML(today.getDay())}</div>
     </div>
@@ -1592,7 +1625,7 @@ function renderMealPlanHTML(plan, r) {
     <div class="meal-card">
       <div class="meal-header">
         <div><div class="meal-name">☀️ มื้อเช้า — ${escHtml(plan.breakfast?.name||'')}</div><div class="meal-time">06:30–08:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(bp*4+bc*4+f*9*0.2)} kcal</div>
+        <div class="meal-kcal">~${Math.round(bp*4+bc*4+bf*9)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${bp}g</span><span class="chip c">C ${bc}g</span></div>
       <div class="meal-body">${_mealItemsHTML(plan.breakfast?.items)}</div>
@@ -1601,7 +1634,7 @@ function renderMealPlanHTML(plan, r) {
     <div class="meal-card">
       <div class="meal-header">
         <div><div class="meal-name">🌤️ มื้อกลางวัน — ${escHtml(plan.lunch?.name||'')}</div><div class="meal-time">12:00–13:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(lp*4+lc*4+f*9*0.35)} kcal</div>
+        <div class="meal-kcal">~${Math.round(lp*4+lc*4+lf*9)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${lp}g</span><span class="chip c">C ${lc}g</span></div>
       <div class="meal-body">${_mealItemsHTML(plan.lunch?.items)}</div>
@@ -1610,7 +1643,7 @@ function renderMealPlanHTML(plan, r) {
     <div class="meal-card">
       <div class="meal-header">
         <div><div class="meal-name">🌙 มื้อเย็น — ${escHtml(plan.dinner?.name||'')}</div><div class="meal-time">17:30–19:00 น.</div></div>
-        <div class="meal-kcal">~${Math.round(dp*4+dc*4+f*9*0.35)} kcal</div>
+        <div class="meal-kcal">~${Math.round(dp*4+dc*4+df*9)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${dp}g</span><span class="chip c">C ${dc}g</span></div>
       <div class="meal-body">${_mealItemsHTML(plan.dinner?.items)}</div>
@@ -1668,6 +1701,9 @@ async function loadAIMealPlan(r) {
     } catch { localStorage.removeItem(cacheKey) }
   }
 
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+
   try {
     const { data: { session } } = await sb.auth.getSession()
     if (!session) throw new Error('no session')
@@ -1682,8 +1718,10 @@ async function loadAIMealPlan(r) {
         proteinG: r.proteinG, carbG: r.carbG, fatG: r.fatG,
         targetCal: r.targetCal, goal: r.goal,
         sports: r.sports || [], dayOfWeek: new Date().getDay()
-      })
+      }),
+      signal: controller.signal
     })
+    clearTimeout(timeoutId)
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const plan = await res.json()
@@ -1693,6 +1731,7 @@ async function loadAIMealPlan(r) {
     foodPanel.innerHTML = renderMealPlanHTML(plan, r)
 
   } catch (err) {
+    clearTimeout(timeoutId)
     // Fallback to static menu — never leave user without food plan
     const dayIdx = new Date().getDay()
     const fallback = FALLBACK_MENUS[dayIdx]
@@ -1709,9 +1748,12 @@ async function loadAIMealPlan(r) {
         ]
       }
     }
+    const isTimeout = err.name === 'AbortError'
     foodPanel.innerHTML = renderMealPlanHTML(staticPlan, r)
-      + `<div style="font-size:.62em;color:var(--muted);text-align:center;padding:8px;font-family:var(--font-m)">⚠️ ใช้เมนูสำรอง — เชื่อมต่อ AI ไม่ได้</div>`
-    console.warn('Meal plan AI failed, using fallback:', err.message)
+      + `<div style="font-size:.62em;color:var(--muted);text-align:center;padding:8px;font-family:var(--font-m)">
+          ${isTimeout ? '⏱️ AI ตอบช้าเกินไป' : '⚠️ เชื่อมต่อ AI ไม่ได้'} — ใช้เมนูสำรอง
+          <button onclick="regenerateMealPlan()" style="margin-left:6px;padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:1em">🔄 ลองใหม่</button>
+        </div>`
   }
 }
 
@@ -1760,7 +1802,7 @@ function buildDiaryHTML() {
             ${l.calories_kcal?l.calories_kcal+' kcal':''}${l.protein_g?' · P '+l.protein_g+'g':''}${l.carb_g?' · C '+l.carb_g+'g':''}${l.fat_g?' · F '+l.fat_g+'g':''}${l.logged_at?(' · '+new Date(l.logged_at).toLocaleTimeString('th',{hour:'2-digit',minute:'2-digit'})):''}
           </div>
         </div>
-        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em" aria-label="ลบรายการ">✕</button>
+        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em" aria-label="ลบ ${escHtml(l.food_name)}">✕</button>
       </div>`).join('')}
     </div>`
   }).join('')
@@ -1768,13 +1810,13 @@ function buildDiaryHTML() {
   const waterBadges = waterLogs.length
     ? waterLogs.map(l => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:.66em;font-family:var(--font-m);color:var(--accent4);padding:3px 8px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:8px;margin:2px">
         💧${l.water_ml}ml
-        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:0;line-height:1;margin-left:2px" aria-label="ลบรายการ">✕</button>
+        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:0;line-height:1;margin-left:2px" aria-label="ลบน้ำ ${l.water_ml}ml">✕</button>
       </span>`).join('')
     : `<span style="font-size:.72em;color:var(--muted)">ยังไม่ได้บันทึก</span>`
 
   const mtBtn = (t) => {
     const active = diaryMealType === t
-    return `<button onclick="setDiaryMealType('${t}')" id="dmt-${t}" style="flex:1;min-width:62px;padding:7px 4px;border-radius:10px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(45,212,191,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.7em;cursor:pointer;transition:all .2s;text-align:center">
+    return `<button onclick="setDiaryMealType('${t}')" id="dmt-${t}" style="flex:1;min-width:62px;padding:7px 4px;border-radius:10px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(168,85,247,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.7em;cursor:pointer;transition:all .2s;text-align:center">
       ${mIcons[t]}<br><span style="font-size:.85em">${mNames[t]}</span>
     </button>`
   }
@@ -1857,7 +1899,7 @@ function buildDiaryHTML() {
 
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>💧 น้ำ</div>
-      <div class="prog-row" style="margin-bottom:12px"><div class="prog-header"><span class="prog-label">${Math.round(totalW)}ml / ${tW}ml</span><span class="prog-val">${pW}%</span></div><div class="prog-track"><div class="prog-fill" style="width:${pW}%;background:var(--accent4)"></div></div></div>
+      <div class="prog-row" style="margin-bottom:12px"><div class="prog-header"><span class="prog-label">${Math.round(totalW)}ml / ${tW}ml</span><span class="prog-val">${pW}%</span></div><div class="prog-track"><div class="prog-fill water-bar" style="width:${pW}%;background:var(--accent4)"></div></div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <button onclick="addWater(150)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">☕ กาแฟ<br><span style="font-size:.8em;color:var(--muted)">+150ml</span></button>
         <button onclick="addWater(250)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">💧 แก้ว<br><span style="font-size:.8em;color:var(--muted)">+250ml</span></button>
@@ -1866,7 +1908,7 @@ function buildDiaryHTML() {
       <div style="display:flex;flex-wrap:wrap;gap:4px">${waterBadges}</div>
     </div>
 
-    <div class="card" style="border:1px solid rgba(45,212,191,.15)">
+    <div class="card" style="border:1px solid rgba(168,85,247,.15)">
       <div class="card-title"><span class="dot" style="background:var(--accent)"></span>➕ บันทึกอาหาร</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
         ${['breakfast','lunch','dinner','snack'].map(mtBtn).join('')}
@@ -1876,7 +1918,7 @@ function buildDiaryHTML() {
         <input id="diary-food-name" type="text" maxlength="200" placeholder="เช่น ข้าวกล้อง + ไก่ย่าง" style="${inputStyle}" oninput="clearAiStatus()">
       </div>
       <div class="ai-food-row">
-        <button id="ai-est-btn" class="ai-food-btn" onclick="estimateFoodCalAI()" style="border:1px solid rgba(45,212,191,.3);background:rgba(45,212,191,.07);color:var(--accent)">🤖 AI ประมาณ cal</button>
+        <button id="ai-est-btn" class="ai-food-btn" onclick="estimateFoodCalAI()" style="border:1px solid rgba(168,85,247,.3);background:rgba(168,85,247,.07);color:var(--accent)">🤖 AI ประมาณ cal</button>
         <label class="ai-food-btn" style="border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07);color:var(--accent2);cursor:pointer">
           📸 ถ่ายรูปอาหาร
           <input type="file" accept="image/*" capture="environment" onchange="handleFoodPhoto(this)" style="display:none">
@@ -1892,12 +1934,14 @@ function buildDiaryHTML() {
         <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" inputmode="decimal" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" inputmode="decimal" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
       </div>
-      <button id="diary-submit-btn" onclick="submitFoodLog()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:background .2s">+ บันทึก</button>
+      <button id="diary-submit-btn" onclick="submitFoodLog()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#07050e;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:background .2s">+ บันทึก</button>
       <div id="diary-alert" style="display:none;margin-top:8px;font-size:.72em;padding:6px 10px;border-radius:8px"></div>
     </div>
 
     <div id="diary-log-items">
-      ${logHTML||`<div class="card" style="text-align:center;padding:28px;color:var(--muted);font-size:.8em">ยังไม่มีรายการวันนี้<br><span style="font-size:.85em">เริ่มบันทึกได้เลยด้านบน</span></div>`}
+      ${diaryLoading
+        ? `<div class="card" style="text-align:center;padding:28px;color:var(--muted);font-size:.8em">กำลังโหลด...</div>`
+        : logHTML||`<div class="card" style="text-align:center;padding:28px;color:var(--muted);font-size:.8em">ยังไม่มีรายการวันนี้<br><span style="font-size:.85em">เริ่มบันทึกได้เลยด้านบน</span></div>`}
     </div>`
 }
 
@@ -1916,7 +1960,7 @@ function setDiaryMealType(type) {
     if (!btn) return
     const active = t === type
     btn.style.border = active ? '1px solid var(--accent)' : '1px solid var(--border)'
-    btn.style.background = active ? 'rgba(45,212,191,.1)' : 'transparent'
+    btn.style.background = active ? 'rgba(168,85,247,.1)' : 'transparent'
     btn.style.color = active ? 'var(--accent)' : 'var(--muted)'
   })
 }
@@ -1957,6 +2001,8 @@ async function submitFoodLog() {
     document.getElementById('diary-carb').value = ''
     document.getElementById('diary-fat').value = ''
     document.getElementById('ai-estimate-status').style.display = 'none'
+    const timeInput = document.getElementById('diary-time')
+    if (timeInput) timeInput.value = new Date().toTimeString().slice(0,5)
   } finally {
     if (btn) { btn.textContent = '+ บันทึก'; btn.disabled = false }
   }
@@ -1985,7 +2031,11 @@ async function deleteFoodLog(id) {
   if (!currentUser) return
   if (!confirm('ลบรายการนี้?')) return
   const { error } = await sb.from('food_logs').delete().eq('id', id).eq('user_id', currentUser.id)
-  if (error) { console.error('deleteFoodLog:', error.message); return }
+  if (error) {
+    const el = document.getElementById('diary-log-items')
+    if (el) el.insertAdjacentHTML('afterbegin', `<div style="padding:8px 12px;margin-bottom:8px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-size:.72em;font-family:var(--font-m)">⚠️ ลบไม่สำเร็จ กรุณาลองใหม่</div>`)
+    return
+  }
   todayLogs = todayLogs.filter(l => l.id !== id)
   renderDiaryPanel()
 }
@@ -2007,7 +2057,12 @@ async function loadTodayFoodLogs() {
     .gte('logged_at', start)
     .lte('logged_at', end)
     .order('logged_at', { ascending: true })
-  if (error) { console.error('loadTodayFoodLogs:', error.message); return }
+  diaryLoading = false
+  if (error) {
+    const el = document.getElementById('diary-log-items')
+    if (el) el.innerHTML = `<div class="card" style="text-align:center;padding:20px;color:var(--red);font-size:.8em">⚠️ โหลดข้อมูลไม่สำเร็จ<br><button onclick="loadTodayFoodLogs()" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--font-m);font-size:.9em">ลองใหม่</button></div>`
+    return
+  }
   todayLogs = data || []
   renderDiaryPanel()
 }
@@ -2030,7 +2085,7 @@ async function estimateFoodCalAI() {
   const statusEl = document.getElementById('ai-estimate-status')
   const btn = document.getElementById('ai-est-btn')
   const name = nameEl?.value?.trim()
-  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);color:var(--accent);font-family:var(--font-m)'
+  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);color:var(--accent);font-family:var(--font-m)'
   const errStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
   if (!name) {
     statusEl.textContent = 'กรุณาใส่ชื่ออาหารก่อนค่ะ'
@@ -2070,7 +2125,7 @@ async function handleFoodPhoto(input) {
   const file = input.files?.[0]
   if (!file) return
   const statusEl = document.getElementById('ai-estimate-status')
-  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);color:var(--accent);font-family:var(--font-m)'
+  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);color:var(--accent);font-family:var(--font-m)'
   const errStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
   if (file.size > 4 * 1024 * 1024) {
     statusEl.textContent = 'รูปใหญ่เกินไป (สูงสุด 4MB) — ลองถ่ายใหม่หรือเลือกรูปที่เล็กกว่าค่ะ'
@@ -2184,7 +2239,7 @@ function renderDashboard(profile, record, allRecords) {
   const fatProgress = Math.max(0, Math.min(100, 100-(cr.fatToLose/(cr.fatToLose+0.1)*100)))
   document.getElementById('target-section').innerHTML = `
     <div class="section-title">TARGET ${cr.weeksNeeded} WEEKS</div>
-    <div class="prog-row"><div class="prog-header"><span class="prog-label">ลดไขมัน ${cr.fatToLose} kg</span><span class="prog-val">0 → ${cr.fatToLose} kg</span></div><div class="prog-track"><div class="prog-fill" style="width:4%;background:var(--red)"></div></div></div>
+    <div class="prog-row"><div class="prog-header"><span class="prog-label">ลดไขมัน ${cr.fatToLose} kg</span><span class="prog-val">0 → ${cr.fatToLose} kg</span></div><div class="prog-track"><div class="prog-fill" style="width:${fatProgress}%;background:var(--red)"></div></div></div>
     <div class="prog-row"><div class="prog-header"><span class="prog-label">รักษากล้ามเนื้อ ${muscle} kg</span><span class="prog-val">คงระดับนี้</span></div><div class="prog-track"><div class="prog-fill" style="width:82%;background:var(--accent3)"></div></div></div>
     <div class="prog-row"><div class="prog-header"><span class="prog-label">แคลอรี่/วัน</span><span class="prog-val">${cr.targetCal} / ${cr.tdee} kcal</span></div><div class="prog-track"><div class="prog-fill" style="width:${Math.round(cr.targetCal/cr.tdee*100)}%;background:var(--accent4)"></div></div></div>
     <div class="prog-note">TDEE ${cr.tdee} kcal · ขาดดุล ${cr.tdee-cr.targetCal} kcal/วัน · โปรตีน ${cr.proteinG}g/วัน · ดื่มน้ำ ${cr.waterNeeded}L/วัน</div>
@@ -2231,6 +2286,7 @@ function renderDashboard(profile, record, allRecords) {
   `
 
   // Async: load AI meal plan + diary after DOM is ready
+  diaryLoading = true
   loadAIMealPlan(cr)
   loadTodayFoodLogs()
 }
@@ -2317,12 +2373,17 @@ async function init() {
   const rawAvatarUrl = currentUser.user_metadata?.avatar_url
   if (rawAvatarUrl && /^https?:\/\//.test(rawAvatarUrl)) {
     const img = document.createElement('img')
-    img.src = rawAvatarUrl
-    img.alt = 'avatar'
-    avatar.textContent = ''
-    avatar.appendChild(img)
+    img.src = rawAvatarUrl; img.alt = 'avatar'
+    avatar.textContent = ''; avatar.appendChild(img)
+    const imgH = document.createElement('img')
+    imgH.src = rawAvatarUrl; imgH.alt = 'avatar'
+    const heroAv = document.getElementById('hero-avatar-lg')
+    if (heroAv) { heroAv.textContent = ''; heroAv.appendChild(imgH) }
   } else {
-    avatar.textContent = (currentUser.user_metadata?.full_name || currentUser.email || '?')[0].toUpperCase()
+    const initial = (currentUser.user_metadata?.full_name || currentUser.email || '?')[0].toUpperCase()
+    avatar.textContent = initial
+    const heroAv = document.getElementById('hero-avatar-lg')
+    if (heroAv) heroAv.textContent = initial
   }
 
   // Load from Supabase — specific columns only (not select *)
@@ -2348,10 +2409,12 @@ async function init() {
   if (storedAvatarUrl && /^https?:\/\//.test(storedAvatarUrl)) {
     const avatarEl = document.getElementById('user-avatar')
     const img = document.createElement('img')
-    img.src = storedAvatarUrl
-    img.alt = 'avatar'
-    avatarEl.textContent = ''
-    avatarEl.appendChild(img)
+    img.src = storedAvatarUrl; img.alt = 'avatar'
+    avatarEl.textContent = ''; avatarEl.appendChild(img)
+    const imgH = document.createElement('img')
+    imgH.src = storedAvatarUrl; imgH.alt = 'avatar'
+    const heroAv = document.getElementById('hero-avatar-lg')
+    if (heroAv) { heroAv.textContent = ''; heroAv.appendChild(imgH) }
   }
 
   // Show topbar + hero — use textContent to prevent XSS
@@ -2393,25 +2456,36 @@ init()
 </script>
 
 <!-- THEME SWITCHER -->
-<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(15,19,24,.95);border:1px solid rgba(255,255,255,.1);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
-  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#5a6478;margin-right:2px">THEME</span>
+<div id="theme-switcher" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:flex;gap:6px;align-items:center;background:rgba(14,11,28,.96);border:1px solid rgba(168,85,247,.2);border-radius:30px;padding:6px 10px;backdrop-filter:blur(10px)">
+  <span style="font-family:'DM Mono',monospace;font-size:.6em;color:#6b5fa0;margin-right:2px">THEME</span>
+  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a855f7;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
   <button onclick="setTheme('teal')" style="width:18px;height:18px;border-radius:50%;background:#2dd4bf;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-teal" title="Teal"></button>
-  <button onclick="setTheme('violet')" style="width:18px;height:18px;border-radius:50%;background:#a78bfa;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-violet" title="Violet"></button>
   <button onclick="setTheme('ember')" style="width:18px;height:18px;border-radius:50%;background:#fb923c;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-ember" title="Ember"></button>
+  <button onclick="setTheme('rose')" style="width:18px;height:18px;border-radius:50%;background:#f43f5e;border:2px solid transparent;cursor:pointer;transition:border-color .2s" id="t-rose" title="Rose"></button>
 </div>
 
 <script>
-function setTheme(t){
-  document.documentElement.setAttribute('data-theme',t)
-  localStorage.setItem('fitbody_theme',t)
-  document.querySelectorAll('#theme-switcher button').forEach(b=>b.style.borderColor='transparent')
-  const el=document.getElementById('t-'+t)
-  if(el)el.style.borderColor='rgba(255,255,255,0.8)'
+const THEMES = {
+  violet: { accent:'#a855f7', hover:'#9333ea', border:'rgba(168,85,247,.13)', bg:'#07050e', surface:'#0e0b1c', s2:'#150f28', s3:'#1b1435', text:'#ede9ff', muted:'#8b7fad' },
+  teal:   { accent:'#2dd4bf', hover:'#20bfad', border:'rgba(45,212,191,.1)',   bg:'#060d0d', surface:'#091614', s2:'#0d1e1e', s3:'#122826', text:'#e8fafa', muted:'#7fa8a5' },
+  ember:  { accent:'#fb923c', hover:'#f97316', border:'rgba(251,146,60,.13)',  bg:'#0e0700', surface:'#160d00', s2:'#1e1200', s3:'#261800', text:'#fff3e8', muted:'#9e7a50' },
+  rose:   { accent:'#f43f5e', hover:'#e11d48', border:'rgba(244,63,94,.13)',   bg:'#0e0508', surface:'#160710', s2:'#1e0a18', s3:'#260e20', text:'#ffe8ef', muted:'#9e5070' },
+}
+function setTheme(t) {
+  const th = THEMES[t] || THEMES.violet
+  const r = document.documentElement.style
+  r.setProperty('--accent', th.accent); r.setProperty('--accent-hover', th.hover)
+  r.setProperty('--border', th.border); r.setProperty('--bg', th.bg)
+  r.setProperty('--surface', th.surface); r.setProperty('--surface2', th.s2); r.setProperty('--surface3', th.s3)
+  r.setProperty('--text', th.text); r.setProperty('--muted', th.muted)
+  localStorage.setItem('fitbody_theme', t)
+  document.querySelectorAll('#theme-switcher button').forEach(b => b.style.borderColor = 'transparent')
+  const el = document.getElementById('t-' + t)
+  if (el) el.style.borderColor = 'rgba(255,255,255,.85)'
 }
 ;(function(){
-  const t=localStorage.getItem('fitbody_theme')||'teal'
-  document.documentElement.setAttribute('data-theme',t)
-  document.addEventListener('DOMContentLoaded',()=>setTheme(t))
+  const t = localStorage.getItem('fitbody_theme') || 'violet'
+  document.addEventListener('DOMContentLoaded', () => setTheme(t))
 })()
 </script>
 </body>

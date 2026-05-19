@@ -1,6 +1,9 @@
 # Supabase CLI temp files
 supabase/.temp/
 
+# Client config — contains live Supabase anon key
+js/config.js
+
 # OS
 .DS_Store
 Thumbs.db

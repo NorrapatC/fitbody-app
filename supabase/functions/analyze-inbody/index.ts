@@ -43,7 +43,7 @@ function sanitizeResponse(raw: Record<string, unknown>): Record<AllowedField, nu
       result[field] = null
     } else {
       const num = Number(val)
-      result[field] = isFinite(num) ? num : null
+      result[field] = isFinite(num) && num > 0 ? num : null
     }
   }
   return result
@@ -127,7 +127,9 @@ serve(async (req) => {
       )
     }
 
-    const text = candidate.content.parts[0].text
+    const parts = candidate.content.parts || []
+    const textPart = parts.find((p: Record<string,unknown>) => !p.thought && typeof p.text === 'string') || parts[0]
+    const text = (textPart?.text as string) || ''
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) {
       return new Response(JSON.stringify({ error: 'NO_JSON' }), { status: 422, headers: cors })
