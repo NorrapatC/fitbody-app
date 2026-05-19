@@ -1874,10 +1874,6 @@ function buildDiaryHTML() {
       </div>
       <div class="ai-food-row">
         <button id="ai-est-btn" class="ai-food-btn" onclick="estimateFoodCalAI()" style="border:1px solid rgba(45,212,191,.3);background:rgba(45,212,191,.07);color:var(--accent)">🤖 AI ประมาณ cal</button>
-        <label class="ai-food-btn" style="border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07);color:var(--accent2);cursor:pointer">
-          📸 ถ่ายรูปอาหาร
-          <input type="file" accept="image/*" capture="environment" onchange="handleFoodPhoto(this)" style="display:none">
-        </label>
       </div>
       <div id="ai-estimate-status" style="display:none;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;font-family:var(--font-m)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -2049,53 +2045,6 @@ async function estimateFoodCalAI() {
   }
 }
 
-async function handleFoodPhoto(input) {
-  const file = input.files?.[0]
-  if (!file) return
-  const statusEl = document.getElementById('ai-estimate-status')
-  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);color:var(--accent);font-family:var(--font-m)'
-  const errStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
-  if (file.size > 4 * 1024 * 1024) {
-    statusEl.textContent = 'รูปใหญ่เกินไป (สูงสุด 4MB) — ลองถ่ายใหม่หรือเลือกรูปที่เล็กกว่าค่ะ'
-    statusEl.style.cssText = errStyle
-    input.value = ''
-    return
-  }
-  input.disabled = true
-  statusEl.textContent = '📸 กำลังวิเคราะห์รูปอาหาร...'
-  statusEl.style.cssText = okStyle
-  try {
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = e => resolve(e.target.result.split(',')[1])
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session?.access_token) throw new Error('no session')
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/analyze-food`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-      body: JSON.stringify({ imageBase64: base64, mimeType: file.type || 'image/jpeg' })
-    })
-    const result = await res.json()
-    if (!res.ok || result.error) throw new Error(result.error || 'AI error')
-    if (result.food_name) document.getElementById('diary-food-name').value = result.food_name
-    if (result.calories_kcal != null) document.getElementById('diary-cal').value = result.calories_kcal
-    if (result.protein_g != null) document.getElementById('diary-protein').value = result.protein_g
-    if (result.carb_g != null) document.getElementById('diary-carb').value = result.carb_g
-    if (result.fat_g != null) document.getElementById('diary-fat').value = result.fat_g
-    const portion = result.portion_desc ? ` · ${result.portion_desc}` : ''
-    statusEl.textContent = `✓ AI อ่านรูปแล้ว${portion} — ตรวจสอบก่อนบันทึกนะคะ`
-    statusEl.style.cssText = okStyle
-  } catch {
-    statusEl.textContent = 'วิเคราะห์รูปไม่ได้ กรุณากรอกเองค่ะ'
-    statusEl.style.cssText = errStyle
-  } finally {
-    input.disabled = false
-    input.value = ''
-  }
-}
 
 // Force regenerate — clears cache for today then reloads
 function regenerateMealPlan() {
