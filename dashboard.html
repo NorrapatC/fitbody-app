@@ -393,6 +393,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
 let todayLogs = [], diaryMealType = 'breakfast'
 let editSports = []
+let wtFreq = 3
 
 const SPORT_LIST = [
   {key:'weight_training', label:'🏋️ เวทเทรนนิ่ง'},
@@ -631,7 +632,8 @@ function subHead(dot, label, sub) {
 }
 
 // ======= GENERATE WORKOUT BASED ON SPORTS + GOAL =======
-function generateWorkoutPlan(sports, goal, cr) {
+function generateWorkoutPlan(sports, goal, cr, freq) {
+  const f = (freq && [2,3,4,5].includes(Number(freq))) ? Number(freq) : 3
   const has = s => sports.includes(s)
   const hasWT = has('weight_training'), hasBad = has('badminton'), hasRun = has('running')
   const hasHyrox = has('hyrox'), hasSwim = has('swimming'), hasCycle = has('cycling')
@@ -644,25 +646,121 @@ function generateWorkoutPlan(sports, goal, cr) {
   const dayBlocks = {}
   const pushDay = (day, block) => { if (!dayBlocks[day]) dayBlocks[day] = []; dayBlocks[day].push(block) }
 
-  // WEIGHT TRAINING
+  // WEIGHT TRAINING — split varies by frequency
   if (hasWT || noSport) {
-    const subGoal = goal==='muscle_gain'?'Volume · Progressive Overload':goal==='fat_loss'?'Compound + Superset · Deficit':'Maintenance'
-    pushDay('MON', { color:'var(--accent4)', dayLabel:'PUSH', dayCls:'dt-w',
-      title:'🏋️ PUSH DAY', sub:'อก · ไหล่ · Tricep · '+subGoal, sections:[
-        { dot:'var(--accent4)', label:'Compound', hint:'🔵 Big Press First', ex:['benchpress','incline_db_press','overhead_press'] },
-        { dot:'var(--accent)', label:'Isolation', hint:'🟡 High Rep', ex:['lateral_raise','tricep_pushdown','chest_fly','dips'] }
-    ]})
-    pushDay('WED', { color:'var(--accent3)', dayLabel:'PULL', dayCls:'dt-w',
-      title:'🏋️ PULL DAY', sub:'หลัง · Bicep · Rear Shoulder', sections:[
-        { dot:'var(--accent4)', label:'Width', hint:'🔵 Pull-up/Pulldown ก่อน', ex:['pullup','lat_pulldown'] },
-        { dot:'var(--accent3)', label:'Thickness + Rear', ex:['barbell_row','seated_cable_row','face_pull','bicep_curl','hammer_curl'] }
-    ]})
-    pushDay('FRI', { color:'var(--red)', dayLabel:'LEGS', dayCls:'dt-w',
-      title:'🦵 LEG DAY', sub:'ขา · Glute · น่อง', sections:[
-        { dot:'var(--accent4)', label:'Bilateral Compound', ex:['squat','leg_press'] },
-        { dot:'var(--red)', label:'Hip Hinge + Glute', ex:['rdl','hipthrust','walking_lunge'] },
-        { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
-    ]})
+    const sg = goal==='muscle_gain'?'Volume · Progressive Overload':goal==='fat_loss'?'Compound + Superset · Deficit':'Maintenance'
+
+    if (f === 2) {
+      // ── 2 วัน: Full Body A + B ──
+      pushDay('MON', { color:'var(--accent4)', dayLabel:'FB-A', dayCls:'dt-w',
+        title:'🏋️ FULL BODY A', sub:'Squat Focus · '+sg, info:'ทำ 3-4 เซต · พัก 2-3 นาที · Compound ก่อนเสมอ',
+        sections:[
+          { dot:'var(--accent4)', label:'Compound Lower', hint:'🔵 หนักก่อน', ex:['squat','leg_press'] },
+          { dot:'var(--accent3)', label:'Compound Upper', ex:['benchpress','barbell_row'] },
+          { dot:'var(--accent)', label:'Accessory', hint:'🟡 12-15 Rep', ex:['overhead_press','bicep_curl','calf_raise'] }
+        ]
+      })
+      pushDay('THU', { color:'var(--red)', dayLabel:'FB-B', dayCls:'dt-w',
+        title:'🏋️ FULL BODY B', sub:'Deadlift Focus · '+sg, info:'สลับ pattern กับวัน A · ยกหนักได้เต็มที่เพราะพัก 3 วัน',
+        sections:[
+          { dot:'var(--red)', label:'Hinge + Glute', hint:'🔵 Hip hinge ก่อน', ex:['deadlift','hipthrust','rdl'] },
+          { dot:'var(--accent4)', label:'Upper Push + Pull', ex:['incline_db_press','pullup','overhead_press'] },
+          { dot:'var(--accent)', label:'Accessory', hint:'🟡 15 Rep', ex:['hammer_curl','tricep_pushdown','leg_curl'] }
+        ]
+      })
+    } else if (f === 3) {
+      // ── 3 วัน: Push / Pull / Legs ──
+      pushDay('MON', { color:'var(--accent4)', dayLabel:'PUSH', dayCls:'dt-w',
+        title:'🏋️ PUSH DAY', sub:'อก · ไหล่ · Tricep · '+sg, sections:[
+          { dot:'var(--accent4)', label:'Compound', hint:'🔵 Big Press First', ex:['benchpress','incline_db_press','overhead_press'] },
+          { dot:'var(--accent)', label:'Isolation', hint:'🟡 High Rep', ex:['lateral_raise','tricep_pushdown','chest_fly','dips'] }
+        ]
+      })
+      pushDay('WED', { color:'var(--accent3)', dayLabel:'PULL', dayCls:'dt-w',
+        title:'🏋️ PULL DAY', sub:'หลัง · Bicep · Rear Shoulder', sections:[
+          { dot:'var(--accent4)', label:'Width', hint:'🔵 Pull-up/Pulldown ก่อน', ex:['pullup','lat_pulldown'] },
+          { dot:'var(--accent3)', label:'Thickness + Rear', ex:['barbell_row','seated_cable_row','face_pull','bicep_curl','hammer_curl'] }
+        ]
+      })
+      pushDay('FRI', { color:'var(--red)', dayLabel:'LEGS', dayCls:'dt-w',
+        title:'🦵 LEG DAY', sub:'ขา · Glute · น่อง', sections:[
+          { dot:'var(--accent4)', label:'Bilateral Compound', ex:['squat','leg_press'] },
+          { dot:'var(--red)', label:'Hip Hinge + Glute', ex:['rdl','hipthrust','walking_lunge'] },
+          { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
+        ]
+      })
+    } else if (f === 4) {
+      // ── 4 วัน: Upper / Lower × 2 ──
+      pushDay('MON', { color:'var(--accent4)', dayLabel:'UP-A', dayCls:'dt-w',
+        title:'🏋️ UPPER A', sub:'Horizontal Push + Pull Heavy · '+sg, info:'เน้น Bench + Row · ทำ 4-5 เซต',
+        sections:[
+          { dot:'var(--accent4)', label:'Push Compound', hint:'🔵 Bench ก่อน', ex:['benchpress','incline_db_press','overhead_press'] },
+          { dot:'var(--accent3)', label:'Pull Compound', ex:['barbell_row','lat_pulldown'] },
+          { dot:'var(--accent)', label:'Arm Accessory', hint:'🟡 10-12 Rep', ex:['bicep_curl','tricep_pushdown'] }
+        ]
+      })
+      pushDay('TUE', { color:'var(--red)', dayLabel:'LW-A', dayCls:'dt-w',
+        title:'🦵 LOWER A', sub:'Squat Focus · '+sg, info:'Squat Pattern วันนี้ · พักขาพรุ่งนี้',
+        sections:[
+          { dot:'var(--accent4)', label:'Squat Pattern', hint:'🔵 Squat ก่อน', ex:['squat','leg_press','walking_lunge'] },
+          { dot:'var(--red)', label:'Hip Hinge', ex:['rdl'] },
+          { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
+        ]
+      })
+      pushDay('THU', { color:'var(--accent5)', dayLabel:'UP-B', dayCls:'dt-w',
+        title:'🏋️ UPPER B', sub:'Vertical Push + Pull · Rear Delt · '+sg, info:'เปลี่ยน angle จาก Upper A · ไม่ซ้ำ exercise',
+        sections:[
+          { dot:'var(--accent5)', label:'Vertical Push + Pull', hint:'🔵 Pullup + OHP ก่อน', ex:['pullup','overhead_press','incline_db_press'] },
+          { dot:'var(--accent3)', label:'Row + Rear Delt', ex:['seated_cable_row','face_pull'] },
+          { dot:'var(--accent)', label:'Arm Accessory', hint:'🟡 Superset ได้', ex:['hammer_curl','chest_fly','lateral_raise'] }
+        ]
+      })
+      pushDay('FRI', { color:'var(--accent2)', dayLabel:'LW-B', dayCls:'dt-w',
+        title:'🦵 LOWER B', sub:'Hip Hinge + Glute Focus · '+sg, info:'Deadlift Pattern วันนี้ · สลับกับ Squat วันอังคาร',
+        sections:[
+          { dot:'var(--accent2)', label:'Hip Hinge Heavy', hint:'🔵 Deadlift ก่อน', ex:['deadlift','hipthrust'] },
+          { dot:'var(--red)', label:'Squat + Accessory', ex:['leg_press','walking_lunge'] },
+          { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
+        ]
+      })
+    } else {
+      // ── 5 วัน: Push / Pull / Legs / Push-Vol / Pull+Arms ──
+      pushDay('MON', { color:'var(--accent4)', dayLabel:'PUSH1', dayCls:'dt-w',
+        title:'🏋️ PUSH HEAVY', sub:'อก · ไหล่ Heavy · '+sg, info:'วันนี้เน้น Strength · 4-5 เซต 5-8 Rep',
+        sections:[
+          { dot:'var(--accent4)', label:'Heavy Press', hint:'🔵 Bench / OHP ก่อน', ex:['benchpress','overhead_press'] },
+          { dot:'var(--accent5)', label:'Volume Accessory', ex:['incline_db_press','lateral_raise','dips'] }
+        ]
+      })
+      pushDay('TUE', { color:'var(--accent3)', dayLabel:'PULL1', dayCls:'dt-w',
+        title:'🏋️ PULL HEAVY', sub:'หลัง Heavy · '+sg, info:'เน้น Compound · Deadlift หรือ Barbell Row',
+        sections:[
+          { dot:'var(--accent3)', label:'Heavy Pull', hint:'🔵 Pullup + Row ก่อน', ex:['pullup','barbell_row'] },
+          { dot:'var(--accent4)', label:'Lat Width + Rear', ex:['lat_pulldown','face_pull','seated_cable_row'] }
+        ]
+      })
+      pushDay('WED', { color:'var(--red)', dayLabel:'LEGS', dayCls:'dt-w',
+        title:'🦵 LEG DAY', sub:'ขา · Glute · น่อง · '+sg, sections:[
+          { dot:'var(--accent4)', label:'Bilateral Compound', ex:['squat','leg_press'] },
+          { dot:'var(--red)', label:'Hip Hinge + Glute', ex:['rdl','hipthrust','walking_lunge'] },
+          { dot:'var(--accent)', label:'Isolation', ex:['leg_curl','calf_raise'] }
+        ]
+      })
+      pushDay('THU', { color:'var(--accent2)', dayLabel:'PUSH2', dayCls:'dt-w',
+        title:'🏋️ PUSH VOLUME', sub:'ไหล่ · Chest Fly · Tricep · '+sg, info:'วันนี้เน้น Volume · 4 เซต 10-15 Rep',
+        sections:[
+          { dot:'var(--accent2)', label:'Shoulder Focus', hint:'🔵 DB Press ก่อน', ex:['overhead_press','lateral_raise'] },
+          { dot:'var(--accent)', label:'Chest + Tricep Volume', ex:['chest_fly','incline_db_press','tricep_pushdown','dips'] }
+        ]
+      })
+      pushDay('FRI', { color:'var(--accent5)', dayLabel:'PULL2', dayCls:'dt-w',
+        title:'🏋️ PULL + ARMS', sub:'หลัง Volume · Bicep · '+sg, info:'เน้น Arms + Rear Delt วันนี้',
+        sections:[
+          { dot:'var(--accent5)', label:'Back Volume', hint:'🔵 Cable Row ก่อน', ex:['seated_cable_row','lat_pulldown','face_pull'] },
+          { dot:'var(--accent3)', label:'Bicep + Rear', hint:'🟡 Superset ได้เลย', ex:['bicep_curl','hammer_curl'] }
+        ]
+      })
+    }
   }
 
   // HYROX
@@ -930,12 +1028,27 @@ function generateWorkoutPlan(sports, goal, cr) {
         return s ? `<span class="sports-current-tag">${s.label}</span>` : ''
       }).join('')
 
-  return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div style="flex:1;min-width:0">
-      <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">กีฬาที่เล่น</div>
-      <div style="display:flex;flex-wrap:wrap;gap:0">${sportTagsHTML}</div>
+  const freqLabels = {2:'2 วัน · Full Body',3:'3 วัน · PPL',4:'4 วัน · Upper/Lower',5:'5 วัน · PPL+'}
+  const freqRow = (hasWT || noSport) ? `
+    <div style="border-top:1px solid rgba(255,255,255,.06);margin-top:10px;padding-top:10px">
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px">ความถี่เวทเทรนนิ่ง</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${[2,3,4,5].map(n => {
+          const active = f === n
+          return `<button onclick="setWtFreq(${n})" style="padding:6px 12px;border-radius:20px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(45,212,191,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.72em;cursor:pointer;transition:all .18s;white-space:nowrap">${freqLabels[n]}</button>`
+        }).join('')}
+      </div>
+    </div>` : ''
+
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.66em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">กีฬาที่เล่น</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0">${sportTagsHTML}</div>
+      </div>
+      <button onclick="openSportsEditor()" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;white-space:nowrap">✏️ แก้ไข</button>
     </div>
-    <button onclick="openSportsEditor()" style="flex-shrink:0;padding:8px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:var(--font-b);font-size:.76em;cursor:pointer;white-space:nowrap">✏️ แก้ไข</button>
+    ${freqRow}
   </div>
   <div class="card">
     <div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์ <span style="font-size:.74em;color:var(--muted);font-weight:400;font-family:var(--font-m)">แตะวันเพื่อดูโปรแกรม</span></div>
@@ -1084,6 +1197,18 @@ async function saveProfile() {
   closeProfileEditor()
 }
 
+// ======= WORKOUT FREQUENCY =======
+async function setWtFreq(n) {
+  if (!currentUser || ![2,3,4,5].includes(n)) return
+  wtFreq = n
+  userProfile = { ...userProfile, wt_freq: n }
+  const exPanel = document.getElementById('tab-exercise')
+  if (exPanel && calcData) {
+    exPanel.innerHTML = generateWorkoutPlan(userProfile?.sports || [], calcData?.goal, calcData, n)
+  }
+  await sb.from('profiles').update({ wt_freq: n }).eq('id', currentUser.id)
+}
+
 // ======= SPORTS EDITOR =======
 function openSportsEditor() {
   editSports = [...(userProfile?.sports || [])]
@@ -1139,7 +1264,7 @@ async function saveSports() {
   // Re-render exercise panel immediately
   const exPanel = document.getElementById('tab-exercise')
   if (exPanel && calcData) {
-    exPanel.innerHTML = generateWorkoutPlan(editSports, calcData.goal, calcData)
+    exPanel.innerHTML = generateWorkoutPlan(editSports, calcData.goal, calcData, wtFreq)
   }
 }
 
@@ -1788,7 +1913,7 @@ function renderDashboard(profile, record, allRecords) {
 
   // PANELS
   document.getElementById('panels-container').innerHTML = `
-    <div class="panel active" id="tab-exercise">${generateWorkoutPlan(sports, goal, cr)}</div>
+    <div class="panel active" id="tab-exercise">${generateWorkoutPlan(sports, goal, cr, wtFreq)}</div>
     <div class="panel" id="tab-food">${generateFoodPlan(cr)}</div>
     <div class="panel" id="tab-diary">${buildDiaryHTML()}</div>
     <div class="panel" id="tab-history">${buildHistoryHTML(allRecords)}</div>
@@ -1912,7 +2037,7 @@ async function init() {
   // Load from Supabase — specific columns only (not select *)
   document.getElementById('loading-msg').textContent = 'กำลังโหลดข้อมูลของคุณ...'
   const [profileRes, recordsRes] = await Promise.all([
-    sb.from('profiles').select('name,age,height_cm,gender,goal,activity_level,sports,avatar_url').eq('id', currentUser.id).single(),
+    sb.from('profiles').select('name,age,height_cm,gender,goal,activity_level,sports,avatar_url,wt_freq').eq('id', currentUser.id).single(),
     sb.from('inbody_records').select('id,recorded_at,weight_kg,body_fat_pct,muscle_kg,fat_kg,bmi,visceral_fat,inbody_score,input_method').eq('user_id', currentUser.id).order('recorded_at', {ascending: false})
   ])
 
@@ -1924,6 +2049,7 @@ async function init() {
   }
 
   userProfile = profileRes.data || {}
+  wtFreq = userProfile.wt_freq || 3
   const latestRec = recordsRes.data?.[0]
 
   // If profile has a stored avatar_url, prefer it over user_metadata (covers manual uploads)
