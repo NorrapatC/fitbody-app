@@ -2,14 +2,14 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FitBody — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <!-- Reuse all styles from v3 but add user-specific overrides -->
 <style>
-:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent-hover:#20bfad;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#2dd4bf;--accent-hover:#20bfad;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#8b95a8;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
 [data-theme="violet"]{--accent:#a78bfa;--accent-hover:#9061f9}
 [data-theme="ember"]{--accent:#fb923c;--accent-hover:#f97316}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -214,6 +214,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 /* DIARY RINGS */
 .diary-rings-wrap{display:flex;align-items:center;gap:16px;padding:4px 0 14px}
 @media(max-width:340px){.diary-rings-wrap{flex-direction:column;align-items:flex-start}}
+.del-btn{position:relative}.del-btn::after{content:'';position:absolute;inset:-8px}
 .diary-cal-ring{flex-shrink:0;position:relative;width:120px;height:120px}
 .diary-cal-ring svg{transform:rotate(-90deg)}
 .diary-cal-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
@@ -299,7 +300,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   .sc{padding:10px 6px}
   .history-vals{gap:6px}
   .history-val-num{font-size:.95em}
-  .diary-rings-wrap{flex-direction:column;align-items:flex-start}
   .ai-food-btn{font-size:.68em;padding:7px 6px}
 }
 
@@ -440,6 +440,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
       <button onclick="closeSportsEditor()" style="background:rgba(255,255,255,.08);border:none;color:var(--text);width:32px;height:32px;border-radius:50%;font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
     </div>
     <div id="sports-tags-wrap" style="padding:16px 16px 8px;display:flex;flex-wrap:wrap"></div>
+    <div id="sports-save-status" style="display:none;margin:0 20px 8px;font-size:.72em;padding:6px 10px;border-radius:8px;font-family:var(--font-m)"></div>
     <div style="padding:8px 20px 16px;display:flex;gap:10px">
       <button onclick="closeSportsEditor()" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.82em;cursor:pointer">ยกเลิก</button>
       <button onclick="saveSports()" style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.82em;font-weight:700;cursor:pointer">💾 บันทึก</button>
@@ -455,6 +456,7 @@ let currentUser = null, userProfile = null, latestRecord = null, calcData = null
 let todayLogs = [], diaryMealType = 'breakfast'
 let editSports = []
 let wtFreq = 3
+let pendingAvatarFile = null
 
 const SPORT_LIST = [
   {key:'weight_training', label:'🏋️ เวทเทรนนิ่ง'},
@@ -1131,7 +1133,7 @@ function switchDayTab(day, clickedEl) {
   }
   const exPanel = document.getElementById('tab-exercise')
   if (exPanel) exPanel.querySelectorAll('.day-card').forEach(c => {
-    c.style.border = '1px solid rgba(255,255,255,.08)'
+    c.style.border = '1px solid var(--border)'
     c.style.background = ''
   })
   if (clickedEl) {
@@ -1156,7 +1158,7 @@ function openProfileEditor() {
   document.getElementById('profile-name-input').value = userProfile?.name || currentUser?.user_metadata?.full_name || ''
   document.getElementById('profile-email-display').textContent = currentUser?.email || ''
   document.getElementById('avatar-upload-status').textContent = ''
-  window._pendingAvatarFile = null
+  pendingAvatarFile = null
   document.getElementById('profile-modal').classList.add('open')
   document.body.style.overflow = 'hidden'
 }
@@ -1167,7 +1169,11 @@ function closeProfileEditor() {
 }
 
 function closeProfileEditorOutside(e) {
-  if (e.target === document.getElementById('profile-modal')) closeProfileEditor()
+  if (e.target !== document.getElementById('profile-modal')) return
+  const dirty = pendingAvatarFile ||
+    (document.getElementById('profile-name-input')?.value || '') !== (userProfile?.name || '')
+  if (dirty && !confirm('ยังไม่ได้บันทึก — ปิดเลยไหม?')) return
+  closeProfileEditor()
 }
 
 function handleAvatarUpload(input) {
@@ -1191,7 +1197,7 @@ function handleAvatarUpload(input) {
     preview.appendChild(img)
   }
   reader.readAsDataURL(file)
-  window._pendingAvatarFile = file
+  pendingAvatarFile = file
   document.getElementById('avatar-upload-status').textContent = '✓ เลือกรูปแล้ว — กด บันทึก เพื่ออัปโหลด'
 }
 
@@ -1208,8 +1214,8 @@ async function saveProfile() {
   let avatarFailed = false
 
   try {
-    if (window._pendingAvatarFile) {
-      const file = window._pendingAvatarFile
+    if (pendingAvatarFile) {
+      const file = pendingAvatarFile
       const ext = file.type === 'image/png' ? 'png' : 'jpg'
       const path = `${currentUser.id}/avatar.${ext}`
       statusEl.textContent = '⏳ กำลังอัปโหลดรูป...'
@@ -1221,7 +1227,7 @@ async function saveProfile() {
       } else {
         const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path)
         avatarUrl = publicUrl + '?t=' + Date.now()
-        window._pendingAvatarFile = null
+        pendingAvatarFile = null
       }
     }
 
@@ -1318,16 +1324,19 @@ function toggleSportEdit(key, el) {
 async function saveSports() {
   if (!currentUser) return
   const btn = document.querySelector('#sports-modal button[onclick="saveSports()"]')
+  const statusEl = document.getElementById('sports-save-status')
   const orig = btn.textContent
   btn.textContent = 'กำลังบันทึก...'
   btn.disabled = true
+  statusEl.style.display = 'none'
 
   const { error } = await sb.from('profiles').update({ sports: editSports }).eq('id', currentUser.id)
   btn.textContent = orig
   btn.disabled = false
 
   if (error) {
-    alert('บันทึกไม่สำเร็จ: ' + error.message)
+    statusEl.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + error.message
+    statusEl.style.cssText = 'display:block;margin:0 20px 8px;font-size:.72em;padding:6px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
     return
   }
   userProfile = { ...userProfile, sports: editSports }
@@ -1545,7 +1554,7 @@ const FALLBACK_MENUS = [
 function _mealItemsHTML(items) {
   if (!Array.isArray(items)) return ''
   return items.map(it =>
-    `<div class="food-row"><div><div class="food-main">${it.main||''}</div><div class="food-alt">${it.alt||''}</div></div><div class="food-amt">${it.amt||''}</div></div>`
+    `<div class="food-row"><div><div class="food-main">${escHtml(it.main||'')}</div><div class="food-alt">${escHtml(it.alt||'')}</div></div><div class="food-amt">${escHtml(it.amt||'')}</div></div>`
   ).join('')
 }
 
@@ -1572,7 +1581,7 @@ function renderMealPlanHTML(plan, r) {
     <div class="card" style="margin-bottom:12px;padding:12px 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div>
-          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${plan.day_label||'เมนูวันนี้'}</div>
+          <div style="font-family:var(--font-d);font-size:1.1em;color:var(--accent)">${escHtml(plan.day_label||'เมนูวันนี้')}</div>
           <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">${dateStr} · สร้างโดย AI Gemini</div>
         </div>
         <button onclick="regenerateMealPlan()" style="background:rgba(45,212,191,.1);border:1px solid rgba(45,212,191,.2);border-radius:8px;padding:5px 10px;font-size:.64em;color:var(--accent);cursor:pointer;font-family:var(--font-m)">🔄 เมนูใหม่</button>
@@ -1582,7 +1591,7 @@ function renderMealPlanHTML(plan, r) {
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">☀️ มื้อเช้า — ${plan.breakfast?.name||''}</div><div class="meal-time">06:30–08:00 น.</div></div>
+        <div><div class="meal-name">☀️ มื้อเช้า — ${escHtml(plan.breakfast?.name||'')}</div><div class="meal-time">06:30–08:00 น.</div></div>
         <div class="meal-kcal">~${Math.round(bp*4+bc*4+f*9*0.2)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${bp}g</span><span class="chip c">C ${bc}g</span></div>
@@ -1591,7 +1600,7 @@ function renderMealPlanHTML(plan, r) {
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🌤️ มื้อกลางวัน — ${plan.lunch?.name||''}</div><div class="meal-time">12:00–13:00 น.</div></div>
+        <div><div class="meal-name">🌤️ มื้อกลางวัน — ${escHtml(plan.lunch?.name||'')}</div><div class="meal-time">12:00–13:00 น.</div></div>
         <div class="meal-kcal">~${Math.round(lp*4+lc*4+f*9*0.35)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${lp}g</span><span class="chip c">C ${lc}g</span></div>
@@ -1600,7 +1609,7 @@ function renderMealPlanHTML(plan, r) {
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🌙 มื้อเย็น — ${plan.dinner?.name||''}</div><div class="meal-time">17:30–19:00 น.</div></div>
+        <div><div class="meal-name">🌙 มื้อเย็น — ${escHtml(plan.dinner?.name||'')}</div><div class="meal-time">17:30–19:00 น.</div></div>
         <div class="meal-kcal">~${Math.round(dp*4+dc*4+f*9*0.35)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${dp}g</span><span class="chip c">C ${dc}g</span></div>
@@ -1609,7 +1618,7 @@ function renderMealPlanHTML(plan, r) {
 
     <div class="meal-card">
       <div class="meal-header">
-        <div><div class="meal-name">🥛 Post-Workout — ${plan.post_workout?.name||'Protein + Carb'}</div><div class="meal-time">ภายใน 30 นาทีหลังออกกำลังกาย</div></div>
+        <div><div class="meal-name">🥛 Post-Workout — ${escHtml(plan.post_workout?.name||'Protein + Carb')}</div><div class="meal-time">ภายใน 30 นาทีหลังออกกำลังกาย</div></div>
         <div class="meal-kcal">~${Math.round(pp*4+pc*4)} kcal</div>
       </div>
       <div class="macro-chips"><span class="chip p">P ${pp}g</span><span class="chip c">C ${pc}g</span></div>
@@ -1751,7 +1760,7 @@ function buildDiaryHTML() {
             ${l.calories_kcal?l.calories_kcal+' kcal':''}${l.protein_g?' · P '+l.protein_g+'g':''}${l.carb_g?' · C '+l.carb_g+'g':''}${l.fat_g?' · F '+l.fat_g+'g':''}${l.logged_at?(' · '+new Date(l.logged_at).toLocaleTimeString('th',{hour:'2-digit',minute:'2-digit'})):''}
           </div>
         </div>
-        <button onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em">✕</button>
+        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em" aria-label="ลบรายการ">✕</button>
       </div>`).join('')}
     </div>`
   }).join('')
@@ -1759,7 +1768,7 @@ function buildDiaryHTML() {
   const waterBadges = waterLogs.length
     ? waterLogs.map(l => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:.66em;font-family:var(--font-m);color:var(--accent4);padding:3px 8px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:8px;margin:2px">
         💧${l.water_ml}ml
-        <button onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:0;line-height:1;margin-left:2px">✕</button>
+        <button class="del-btn" onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:0;line-height:1;margin-left:2px" aria-label="ลบรายการ">✕</button>
       </span>`).join('')
     : `<span style="font-size:.72em;color:var(--muted)">ยังไม่ได้บันทึก</span>`
 
@@ -1773,7 +1782,7 @@ function buildDiaryHTML() {
   const inputStyle = 'width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:1em;outline:none;box-sizing:border-box'
   const labelStyle = 'display:block;font-size:.62em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px'
 
-  const calColor = pCal >= 100 ? 'var(--red)' : 'var(--accent4)'
+  const calColor = pCal >= 110 ? 'var(--accent2)' : pCal >= 95 ? 'var(--accent3)' : 'var(--accent4)'
 
   return `
     <div class="card">
@@ -1875,13 +1884,13 @@ function buildDiaryHTML() {
       </div>
       <div id="ai-estimate-status" style="display:none;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;font-family:var(--font-m)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div><label style="${labelStyle}">แคลอรี่ (kcal)</label><input id="diary-cal" type="number" min="0" max="9999" step="1" placeholder="เช่น 450" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">แคลอรี่ (kcal)</label><input id="diary-cal" type="number" min="0" max="9999" step="1" inputmode="numeric" placeholder="เช่น 450" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">เวลากิน</label><input id="diary-time" type="time" style="${inputStyle}" value="${new Date().toTimeString().slice(0,5)}"></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:14px">
-        <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
-        <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
-        <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" inputmode="decimal" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" inputmode="decimal" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" inputmode="decimal" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
       </div>
       <button id="diary-submit-btn" onclick="submitFoodLog()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:background .2s">+ บันทึก</button>
       <div id="diary-alert" style="display:none;margin-top:8px;font-size:.72em;padding:6px 10px;border-radius:8px"></div>
@@ -1906,7 +1915,7 @@ function setDiaryMealType(type) {
     const btn = document.getElementById('dmt-' + t)
     if (!btn) return
     const active = t === type
-    btn.style.border = active ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,.08)'
+    btn.style.border = active ? '1px solid var(--accent)' : '1px solid var(--border)'
     btn.style.background = active ? 'rgba(45,212,191,.1)' : 'transparent'
     btn.style.color = active ? 'var(--accent)' : 'var(--muted)'
   })
@@ -1936,14 +1945,25 @@ async function submitFoodLog() {
       const d = new Date(); d.setHours(h, m, 0, 0)
       loggedAt = d.toISOString()
     }
-    await addFoodLog({ meal_type: diaryMealType, food_name: name, calories_kcal: cal, protein_g: p, carb_g: c, fat_g: f, logged_at: loggedAt })
+    const result = await addFoodLog({ meal_type: diaryMealType, food_name: name, calories_kcal: cal, protein_g: p, carb_g: c, fat_g: f, logged_at: loggedAt })
+    if (!result?.ok) {
+      alertEl.textContent = '⚠️ บันทึกไม่สำเร็จ: ' + (result?.error?.message || 'ไม่สามารถบันทึกได้')
+      alertEl.style.cssText = 'display:block;margin-top:8px;font-size:.72em;padding:6px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red)'
+      return
+    }
+    nameEl.value = ''
+    document.getElementById('diary-cal').value = ''
+    document.getElementById('diary-protein').value = ''
+    document.getElementById('diary-carb').value = ''
+    document.getElementById('diary-fat').value = ''
+    document.getElementById('ai-estimate-status').style.display = 'none'
   } finally {
     if (btn) { btn.textContent = '+ บันทึก'; btn.disabled = false }
   }
 }
 
 async function addFoodLog(data) {
-  if (!currentUser) return
+  if (!currentUser) return { ok: false }
   const row = {
     user_id: currentUser.id,
     meal_type: data.meal_type,
@@ -1956,12 +1976,14 @@ async function addFoodLog(data) {
   }
   if (data.logged_at) row.logged_at = data.logged_at
   const { error } = await sb.from('food_logs').insert(row)
-  if (error) { console.error('addFoodLog:', error.message); return }
+  if (error) { console.error('addFoodLog:', error.message); return { ok: false, error } }
   await loadTodayFoodLogs()
+  return { ok: true }
 }
 
 async function deleteFoodLog(id) {
   if (!currentUser) return
+  if (!confirm('ลบรายการนี้?')) return
   const { error } = await sb.from('food_logs').delete().eq('id', id).eq('user_id', currentUser.id)
   if (error) { console.error('deleteFoodLog:', error.message); return }
   todayLogs = todayLogs.filter(l => l.id !== id)
@@ -2110,12 +2132,13 @@ function buildHistoryHTML(records) {
   }
   const rows = records.map(rec => {
     const date = new Date(rec.recorded_at).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'})
+    const wKg = parseFloat(rec.weight_kg)||0, bfPct = parseFloat(rec.body_fat_pct)||0, muKg = parseFloat(rec.muscle_kg)||0
     return `<div class="history-row">
-      <div><div style="font-size:.8em;font-weight:600">${date}</div><div class="history-date">${rec.input_method==='image'?'📸 อัปโหลดรูป':'⌨️ กรอกเอง'}</div></div>
+      <div><div style="font-size:.8em;font-weight:600">${escHtml(date)}</div><div class="history-date">${rec.input_method==='image'?'📸 อัปโหลดรูป':'⌨️ กรอกเอง'}</div></div>
       <div class="history-vals">
-        <div class="history-val"><div class="history-val-num" style="color:var(--accent2)">${rec.weight_kg}</div><div class="history-val-label">kg</div></div>
-        <div class="history-val"><div class="history-val-num" style="color:var(--red)">${rec.body_fat_pct}%</div><div class="history-val-label">ไขมัน</div></div>
-        <div class="history-val"><div class="history-val-num" style="color:var(--accent3)">${rec.muscle_kg}</div><div class="history-val-label">กล้ามเนื้อ</div></div>
+        <div class="history-val"><div class="history-val-num" style="color:var(--accent2)">${wKg}</div><div class="history-val-label">kg</div></div>
+        <div class="history-val"><div class="history-val-num" style="color:var(--red)">${bfPct}%</div><div class="history-val-label">ไขมัน</div></div>
+        <div class="history-val"><div class="history-val-num" style="color:var(--accent3)">${muKg}</div><div class="history-val-label">กล้ามเนื้อ</div></div>
       </div>
     </div>`
   }).join('')
@@ -2135,12 +2158,17 @@ function renderDashboard(profile, record, allRecords) {
   // Calc if not in localStorage
   if (!calcData) {
     const age=profile.age||26,h=profile.height_cm||170,g=profile.gender||'male',w=weight,fp=fatPct
+    const TARGET_FAT_PCT = g === 'male' ? 15 : 22   // healthy body fat target %
     const bmr=g==='male'?(10*w)+(6.25*h)-(5*age)+5:(10*w)+(6.25*h)-(5*age)-161
     const mult={sedentary:1.2,light:1.375,moderate:1.55,active:1.725,very_active:1.9}
     const tdee=Math.round(bmr*(mult[profile.activity_level]||1.55))
     const tCal=Math.max(1400,goal==='fat_loss'?tdee-500:goal==='muscle_gain'?tdee+300:tdee)
     const proteinG=Math.round(w*(goal==='muscle_gain'?2.0:1.8)),proteinKcal=proteinG*4,fatG=Math.round(tCal*0.25/9),fatKcal=fatG*9,carbG=Math.max(0,Math.round((tCal-proteinKcal-fatKcal)/4))
-    calcData={proteinG,carbG,fatG,targetCal:tCal,tdee,fatToLose:Math.round(Math.max(0,(record.fat_kg||w*fp/100)-w*(g==='male'?15:22)/100)*10)/10,targetWeight:Math.round((w-Math.max(0,(record.fat_kg||w*fp/100)-w*(g==='male'?15:22)/100))*10)/10,weeksNeeded:Math.round(Math.max(0,(record.fat_kg||w*fp/100)-w*(g==='male'?15:22)/100)/0.5),waterNeeded:Math.round(w*0.035*10)/10,sports,goal}
+    const currentFatKg = record.fat_kg || w * fp / 100
+    const fatToLose = Math.round(Math.max(0, currentFatKg - w * TARGET_FAT_PCT / 100) * 10) / 10
+    const targetWeight = Math.round((w - fatToLose) * 10) / 10
+    const weeksNeeded = Math.round(fatToLose / 0.5)  // ~0.5 kg fat loss per week
+    calcData={proteinG,carbG,fatG,targetCal:tCal,tdee,fatToLose,targetWeight,weeksNeeded,waterNeeded:Math.round(w*0.035*10)/10,sports,goal}
   }
   const cr = calcData
 
@@ -2282,7 +2310,7 @@ async function init() {
 
   // Load calc from localStorage (set by input.html)
   const saved = localStorage.getItem('calc_result')
-  if (saved) { try { calcData = JSON.parse(saved); calcData.sports = calcData.sports || [] } catch(e){} }
+  if (saved) { try { calcData = JSON.parse(saved); calcData.sports = calcData.sports || [] } catch(e){ console.warn('calc_result corrupt, will recompute:', e); localStorage.removeItem('calc_result') } }
 
   // Set avatar — use createElement to prevent XSS from user_metadata
   const avatar = document.getElementById('user-avatar')
@@ -2327,8 +2355,7 @@ async function init() {
   }
 
   // Show topbar + hero — use textContent to prevent XSS
-  const rawName = currentUser.user_metadata?.full_name || profileRes.data?.name || currentUser.email?.split('@')[0] || 'User'
-  const name = rawName
+  const name = currentUser.user_metadata?.full_name || profileRes.data?.name || currentUser.email?.split('@')[0] || 'User'
   const hour = new Date().getHours()
   const greet = hour < 12 ? 'อรุณสวัสดิ์' : hour < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น'
   document.getElementById('greeting').textContent = greet

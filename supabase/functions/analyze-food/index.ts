@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const GEMINI_KEY = Deno.env.get('GEMINI_KEY')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || '*'
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? 'https://fitbody-app.vercel.app'
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'])
 
@@ -20,9 +20,10 @@ function checkRateLimit(userId: string): boolean {
 }
 
 function getCorsHeaders(origin: string | null) {
+  const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin || '')
   const allowedOrigin = ALLOWED_ORIGIN === '*'
     ? '*'
-    : (origin === ALLOWED_ORIGIN || origin?.startsWith('http://localhost') ? origin! : ALLOWED_ORIGIN)
+    : (origin === ALLOWED_ORIGIN || isLocalhost ? origin! : ALLOWED_ORIGIN)
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -74,6 +75,11 @@ serve(async (req) => {
 
     if (!foodName && !imageBase64) {
       return new Response(JSON.stringify({ error: 'MISSING_INPUT' }), { status: 400, headers: cors })
+    }
+    if (imageBase64) {
+      if (typeof imageBase64 !== 'string' || imageBase64.length > 8_000_000) {
+        return new Response(JSON.stringify({ error: 'BAD_IMAGE' }), { status: 400, headers: cors })
+      }
     }
 
     const jsonSchema = `{"food_name":"ชื่ออาหารที่ชัดเจน","calories_kcal":number,"protein_g":number,"carb_g":number,"fat_g":number,"portion_desc":"ปริมาณที่ประมาณ เช่น 1 จาน ~300g"}`

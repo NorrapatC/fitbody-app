@@ -4,12 +4,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const GEMINI_KEY = Deno.env.get('GEMINI_KEY')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') || '*'
+const ALLOWED_ORIGIN = Deno.env.get('ALLOWED_ORIGIN') ?? 'https://fitbody-app.vercel.app'
+
+// In-memory rate limit: 10 calls / 60s per user (more expensive endpoint — 1024 tokens)
+const rateMap = new Map<string, { count: number; reset: number }>()
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now()
+  const entry = rateMap.get(userId)
+  if (!entry || now > entry.reset) { rateMap.set(userId, { count: 1, reset: now + 60_000 }); return true }
+  if (entry.count >= 10) return false
+  entry.count++
+  return true
+}
 
 function getCorsHeaders(origin: string | null) {
+  const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin || '')
   const allowedOrigin = ALLOWED_ORIGIN === '*'
     ? '*'
-    : (origin === ALLOWED_ORIGIN || origin?.startsWith('http://localhost') ? origin! : ALLOWED_ORIGIN)
+    : (origin === ALLOWED_ORIGIN || isLocalhost ? origin! : ALLOWED_ORIGIN)
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -98,6 +110,10 @@ serve(async (req) => {
   const { data: { user }, error: authError } = await adminClient.auth.getUser(jwt)
   if (authError || !user) {
     return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401, headers: cors })
+  }
+
+  if (!checkRateLimit(user.id)) {
+    return new Response(JSON.stringify({ error: 'RATE_LIMIT' }), { status: 429, headers: cors })
   }
 
   try {
