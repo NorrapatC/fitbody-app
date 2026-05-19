@@ -1,0 +1,13 @@
+# Supabase credentials — ห้าม commit เด็ดขาด
+js/config.js
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>FitBody — กรอกข้อมูล</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<style>
+:root{--bg:#080b10;--surface:#0f1318;--surface2:#161b24;--surface3:#1c2330;--border:rgba(255,255,255,0.08);--accent:#f5c842;--accent2:#ff6b35;--accent3:#4ade80;--accent4:#60a5fa;--accent5:#e879f9;--text:#eef2f7;--muted:#5a6478;--red:#f87171;--font-d:'Bebas Neue',sans-serif;--font-b:'Noto Sans Thai',sans-serif;--font-m:'DM Mono',monospace;--r:14px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:100px}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(8,11,16,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.topbar-back{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:.78em;cursor:pointer;text-decoration:none;font-family:var(--font-b)}
+.topbar h1{font-family:var(--font-d);font-size:1.4em;letter-spacing:.05em;color:var(--accent)}
+
+/* CONTENT */
+.content{max-width:600px;margin:0 auto;padding:20px 14px}
+
+/* METHOD SELECTOR */
+.method-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+.method-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:all .2s}
+.method-card.active{border-color:var(--accent);background:rgba(245,200,66,.05)}
+.method-card:hover:not(.active){border-color:rgba(255,255,255,.15)}
+.method-icon{font-size:2em;margin-bottom:8px}
+.method-title{font-size:.86em;font-weight:700;margin-bottom:4px}
+.method-sub{font-size:.68em;color:var(--muted)}
+
+/* SECTION */
+.section{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+.section-title{font-family:var(--font-d);font-size:1.1em;letter-spacing:.05em;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* UPLOAD AREA */
+.upload-area{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-area:hover,.upload-area.drag-over{border-color:rgba(245,200,66,.4);background:rgba(245,200,66,.03)}
+.upload-icon{font-size:2.5em;margin-bottom:10px}
+.upload-title{font-size:.86em;font-weight:700;margin-bottom:4px}
+.upload-sub{font-size:.72em;color:var(--muted)}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.preview-img{width:100%;max-height:300px;object-fit:contain;border-radius:10px;margin-top:12px;display:none}
+
+/* AI STATUS */
+.ai-status{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:12px;display:none}
+.ai-status-row{display:flex;align-items:center;gap:10px;font-size:.8em}
+.ai-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ai-dot.loading{background:var(--accent);animation:pulse .8s ease-in-out infinite}
+.ai-dot.done{background:var(--accent3)}
+.ai-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:400px){.form-row{grid-template-columns:1fr}}
+.form-group{margin-bottom:14px}
+.form-group.full{grid-column:1/-1}
+.form-label{display:block;font-size:.66em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+.form-input{width:100%;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.88em;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:rgba(245,200,66,.4)}
+.form-input.ai-filled{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.03)}
+.form-input.ai-filled::after{content:'AI'}
+select.form-input{cursor:pointer}
+select.form-input option{background:var(--surface2);color:var(--text)}
+
+/* TAGS (Sports) */
+.tags-wrap{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.tag{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font-b);font-size:.76em;cursor:pointer;transition:all .2s}
+.tag.active{border-color:var(--accent);color:var(--accent);background:rgba(245,200,66,.08)}
+
+/* RESULT PREVIEW */
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+@media(max-width:380px){.result-grid{grid-template-columns:repeat(2,1fr)}}
+.result-card{background:var(--surface2);border-radius:10px;padding:12px 10px;text-align:center;border:1px solid var(--border)}
+.result-label{font-size:.58em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.result-val{font-family:var(--font-d);font-size:1.5em;line-height:1}
+.result-unit{font-size:.6em;color:var(--muted)}
+.result-card.highlight{border-color:rgba(245,200,66,.2)}
+.result-card.highlight .result-val{color:var(--accent)}
+
+/* BUTTON */
+.btn{width:100%;padding:14px;border-radius:12px;border:none;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:#080b10}
+.btn-primary:hover{background:#e6bb30;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:10px}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(0,0,0,.3);border-top-color:#080b10;border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.alert{padding:10px 14px;border-radius:8px;font-size:.78em;margin-bottom:14px;display:none}
+.alert.error{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:#f87171}
+.alert.success{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:#4ade80}
+.alert.show{display:block}
+
+/* PROGRESS STEPS */
+.steps{display:flex;gap:4px;margin-bottom:24px}
+.step{flex:1;height:3px;border-radius:3px;background:var(--surface2);transition:background .3s}
+.step.active{background:var(--accent)}
+.step.done{background:var(--accent3)}
+
+.section-sub{font-size:.76em;color:var(--muted);margin-top:-12px;margin-bottom:16px}
+
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:20px;padding:3px 10px;font-size:.65em;color:var(--accent3);font-family:var(--font-m);margin-left:8px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a href="dashboard.html" class="topbar-back">← กลับ</a>
+  <h1>เพิ่มข้อมูล InBody</h1>
+</div>
+
+<div class="content">
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step-1"></div>
+    <div class="step" id="step-2"></div>
+    <div class="step" id="step-3"></div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert" id="alert-box"></div>
+
+  <!-- PAGE 1: INPUT METHOD -->
+  <div id="page-1">
+    <div class="section">
+      <div class="section-title">เลือกวิธีกรอกข้อมูล</div>
+      <div class="method-grid">
+        <div class="method-card active" id="method-image" onclick="selectMethod('image')">
+          <div class="method-icon">📸</div>
+          <div class="method-title">อัปโหลดรูป InBody</div>
+          <div class="method-sub">AI อ่านตัวเลขให้อัตโนมัติ</div>
+        </div>
+        <div class="method-card" id="method-manual" onclick="selectMethod('manual')">
+          <div class="method-icon">⌨️</div>
+          <div class="method-title">กรอกข้อมูลเอง</div>
+          <div class="method-sub">ใส่ตัวเลขจาก InBody Sheet</div>
+        </div>
+      </div>
+
+      <!-- IMAGE UPLOAD -->
+      <div id="upload-section">
+        <div class="upload-area" id="upload-area">
+          <input type="file" accept="image/*" id="file-input" onchange="handleFileSelect(event)">
+          <div class="upload-icon">📄</div>
+          <div class="upload-title">แตะหรือลากรูป InBody มาวาง</div>
+          <div class="upload-sub">รองรับ JPG, PNG · ขนาดไม่เกิน 10MB</div>
+        </div>
+        <img id="preview-img" class="preview-img" alt="preview">
+
+        <!-- AI STATUS -->
+        <div class="ai-status" id="ai-status">
+          <div class="ai-status-row">
+            <div class="ai-dot loading" id="ai-dot"></div>
+            <span id="ai-status-text">กำลังอ่านข้อมูลจากรูป...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MANUAL NOTE -->
+      <div id="manual-note" style="display:none">
+        <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:1.4em;margin-bottom:6px">📋</div>
+          <div style="font-size:.8em;font-weight:600;margin-bottom:4px">กรอกตัวเลขจาก InBody Sheet</div>
+          <div style="font-size:.72em;color:var(--muted)">กรอกข้อมูลพื้นฐานก่อน แล้วกด "ถัดไป"</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="next-btn-1" onclick="goToPage2()" style="display:none">
+      ถัดไป — กรอกข้อมูลร่างกาย →
+    </button>
+  </div>
+
+  <!-- PAGE 2: BODY DATA -->
+  <div id="page-2" style="display:none">
+    <div class="section">
+      <div class="section-title">
+        ข้อมูลร่างกาย
+        <span class="ai-badge" id="ai-badge" style="display:none">✨ AI อ่านให้แล้ว</span>
+      </div>
+      <p class="section-sub">ตัวเลขจากผลการตรวจ InBody</p>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">อายุ (ปี) *</label>
+          <input type="number" class="form-input" id="f-age" placeholder="26" min="15" max="80">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ส่วนสูง (cm) *</label>
+          <input type="number" class="form-input" id="f-height" placeholder="183" min="140" max="220">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">เพศ *</label>
+          <select class="form-input" id="f-gender">
+            <option value="">เลือก...</option>
+            <option value="male">ชาย</option>
+            <option value="female">หญิง</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">น้ำหนัก (kg) *</label>
+          <input type="number" class="form-input" id="f-weight" placeholder="91.1" step="0.1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">%ไขมัน *</label>
+          <input type="number" class="form-input" id="f-fat-pct" placeholder="21.3" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">กล้ามเนื้อ (kg) *</label>
+          <input type="number" class="form-input" id="f-muscle" placeholder="41.2" step="0.1">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">มวลไขมัน (kg)</label>
+          <input type="number" class="form-input" id="f-fat-kg" placeholder="19.4" step="0.1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">InBody Score</label>
+          <input type="number" class="form-input" id="f-score" placeholder="82" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">ไขมันในช่องท้อง</label>
+          <input type="number" class="form-input" id="f-visceral" placeholder="8" min="1" max="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">BMI</label>
+          <input type="number" class="form-input" id="f-bmi" placeholder="27.2" step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">ข้อมูลส่วนตัว</div>
+      <div class="form-group">
+        <label class="form-label">เป้าหมาย *</label>
+        <select class="form-input" id="f-goal">
+          <option value="fat_loss">ลดไขมัน / Fat Loss</option>
+          <option value="muscle_gain">เพิ่มกล้ามเนื้อ / Muscle Gain</option>
+          <option value="maintenance">รักษาสภาพ / Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ระดับกิจกรรมประจำวัน *</label>
+        <select class="form-input" id="f-activity">
+          <option value="sedentary">นั่งทำงานทั้งวัน ไม่ค่อยเดิน</option>
+          <option value="light">เดินบ้าง ออกกำลังกาย 1–2 วัน/สัปดาห์</option>
+          <option value="moderate" selected>ออกกำลังกาย 3–4 วัน/สัปดาห์</option>
+          <option value="active">ออกกำลังกาย 5–6 วัน/สัปดาห์</option>
+          <option value="very_active">นักกีฬา / ออกกำลังกาย 2 ครั้ง/วัน</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">กีฬาที่เล่น (เลือกได้หลายอย่าง)</label>
+        <div class="tags-wrap" id="sports-tags">
+          <div class="tag" data-sport="weight_training" onclick="toggleSport(this)">🏋️ เวทเทรนนิ่ง</div>
+          <div class="tag" data-sport="badminton" onclick="toggleSport(this)">🏸 แบดมินตัน</div>
+          <div class="tag" data-sport="running" onclick="toggleSport(this)">🏃 วิ่ง</div>
+          <div class="tag" data-sport="hyrox" onclick="toggleSport(this)">🔥 Hyrox</div>
+          <div class="tag" data-sport="swimming" onclick="toggleSport(this)">🏊 ว่ายน้ำ</div>
+          <div class="tag" data-sport="cycling" onclick="toggleSport(this)">🚴 จักรยาน</div>
+          <div class="tag" data-sport="football" onclick="toggleSport(this)">⚽ ฟุตบอล</div>
+          <div class="tag" data-sport="muaythai" onclick="toggleSport(this)">🥊 มวย</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="goToPage1()">← ย้อนกลับ</button>
+      <button class="btn btn-primary" style="flex:2" onclick="goToPage3()">คำนวณแผน →</button>
+    </div>
+  </div>
+
+  <!-- PAGE 3: RESULT PREVIEW -->
+  <div id="page-3" style="display:none">
+    <div class="section">
+      <div class="section-title">สรุปผลการคำนวณ</div>
+
+      <div class="result-grid" id="result-cards"></div>
+
+      <div style="background:var(--surface2);border-radius:12px;padding:16px;margin-bottom:16px" id="result-summary"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">แผนที่จะได้รับ</div>
+      <div id="plan-preview" style="font-size:.82em;color:var(--muted);line-height:2"></div>
+    </div>
+
+    <div class="alert" id="save-alert"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" style="flex:1" onclick="goToPage2()">← แก้ไข</button>
+      <button class="btn btn-primary" style="flex:2" id="save-btn" onclick="saveAndGo()">
+        💾 บันทึกและดูแผน
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+let currentUser = null
+let uploadedFile = null
+let aiFilledFields = new Set()
+let selectedMethod = 'image'
+let selectedSports = []
+let calcResult = {}
+
+// AUTH CHECK
+async function init() {
+  const { data: { session } } = await sb.auth.getSession()
+  if (!session) { window.location.href = 'index.html'; return }
+  currentUser = session.user
+}
+init()
+
+// METHOD SELECT
+function selectMethod(method) {
+  selectedMethod = method
+  document.getElementById('method-image').classList.toggle('active', method === 'image')
+  document.getElementById('method-manual').classList.toggle('active', method === 'manual')
+  document.getElementById('upload-section').style.display = method === 'image' ? 'block' : 'none'
+  document.getElementById('manual-note').style.display = method === 'manual' ? 'block' : 'none'
+  if (method === 'manual') document.getElementById('next-btn-1').style.display = 'block'
+}
+
+// FILE UPLOAD
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+const MAX_FILE_MB = 10
+
+function handleFileSelect(e) {
+  const file = e.target.files[0]
+  if (!file) return
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    showAlert('รองรับเฉพาะ JPG, PNG, WebP เท่านั้น')
+    e.target.value = ''
+    return
+  }
+  if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    showAlert(`ไฟล์ต้องมีขนาดไม่เกิน ${MAX_FILE_MB}MB`)
+    e.target.value = ''
+    return
+  }
+
+  uploadedFile = file
+  const reader = new FileReader()
+  reader.onload = ev => {
+    const img = document.getElementById('preview-img')
+    img.src = ev.target.result
+    img.style.display = 'block'
+    analyzeWithGemini(ev.target.result.split(',')[1])
+  }
+  reader.readAsDataURL(file)
+}
+
+// GEMINI VISION via Supabase Edge Function (key stays server-side)
+async function analyzeWithGemini(base64Data) {
+  const statusEl = document.getElementById('ai-status')
+  const dotEl = document.getElementById('ai-dot')
+  const textEl = document.getElementById('ai-status-text')
+  statusEl.style.display = 'block'
+  dotEl.className = 'ai-dot loading'
+  textEl.textContent = 'AI กำลังอ่านข้อมูลจากรูป InBody...'
+
+  try {
+    const mimeType = uploadedFile?.type || 'image/jpeg'
+    const { data: { session } } = await sb.auth.getSession()
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/analyze-inbody`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ imageBase64: base64Data, mimeType })
+    })
+
+    if (!response.ok) {
+      const err = await response.json()
+      throw new Error(err.error || `HTTP ${response.status}`)
+    }
+
+    const parsed = await response.json()
+    fillFormFromAI(parsed)
+
+    dotEl.className = 'ai-dot done'
+    textEl.textContent = '✅ อ่านข้อมูลสำเร็จ! ตรวจสอบและแก้ไขได้เลย'
+    document.getElementById('next-btn-1').style.display = 'block'
+
+  } catch (err) {
+    dotEl.className = 'ai-dot error'
+    textEl.textContent = '⚠️ อ่านไม่สำเร็จ กรุณากรอกข้อมูลเอง'
+    document.getElementById('next-btn-1').style.display = 'block'
+    console.error(err)
+  }
+}
+
+// FILL FORM FROM AI
+function fillFormFromAI(data) {
+  const fieldMap = {
+    weight_kg: 'f-weight', body_fat_pct: 'f-fat-pct', muscle_kg: 'f-muscle',
+    fat_kg: 'f-fat-kg', bmi: 'f-bmi', visceral_fat: 'f-visceral',
+    inbody_score: 'f-score', height_cm: 'f-height', age: 'f-age'
+  }
+  Object.entries(fieldMap).forEach(([key, id]) => {
+    if (data[key] !== null && data[key] !== undefined) {
+      const el = document.getElementById(id)
+      el.value = data[key]
+      el.classList.add('ai-filled')
+      aiFilledFields.add(id)
+    }
+  })
+  document.getElementById('ai-badge').style.display = 'inline-flex'
+}
+
+// SPORTS TOGGLE
+function toggleSport(el) {
+  el.classList.toggle('active')
+  const sport = el.dataset.sport
+  if (el.classList.contains('active')) {
+    selectedSports.push(sport)
+  } else {
+    selectedSports = selectedSports.filter(s => s !== sport)
+  }
+}
+
+// NAVIGATION
+function goToPage1() {
+  show('page-1'); setStep(1)
+}
+function goToPage2() {
+  if (selectedMethod === 'image' && !uploadedFile && !document.getElementById('f-weight').value) {
+    showAlert('กรุณาอัปโหลดรูปหรือเลือกกรอกข้อมูลเอง'); return
+  }
+  show('page-2'); setStep(2)
+}
+function goToPage3() {
+  if (!validate()) return
+  calcResult = calculate()
+  renderResults()
+  show('page-3'); setStep(3)
+}
+function show(id) {
+  ['page-1','page-2','page-3'].forEach(p => document.getElementById(p).style.display = 'none')
+  document.getElementById(id).style.display = 'block'
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('step-'+i)
+    el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '')
+  })
+}
+
+// VALIDATE
+const FIELD_RULES = [
+  { id: 'f-age',     name: 'อายุ',         min: 15,  max: 80,  required: true },
+  { id: 'f-height',  name: 'ส่วนสูง',      min: 100, max: 250, required: true },
+  { id: 'f-gender',  name: 'เพศ',           min: null,max: null,required: true },
+  { id: 'f-weight',  name: 'น้ำหนัก',      min: 30,  max: 300, required: true },
+  { id: 'f-fat-pct', name: '%ไขมัน',        min: 1,   max: 70,  required: true },
+  { id: 'f-muscle',  name: 'กล้ามเนื้อ',   min: 5,   max: 150, required: true },
+  { id: 'f-score',   name: 'InBody Score',  min: 0,   max: 100, required: false },
+  { id: 'f-visceral',name: 'ไขมันในช่องท้อง', min: 1, max: 20, required: false },
+]
+
+function validate() {
+  for (const f of FIELD_RULES) {
+    const el = document.getElementById(f.id)
+    const val = el.value.trim()
+    if (f.required && !val) {
+      showAlert(`กรุณากรอก "${f.name}"`); return false
+    }
+    if (val && f.min !== null) {
+      const num = parseFloat(val)
+      if (isNaN(num) || num < f.min || num > f.max) {
+        showAlert(`"${f.name}" ต้องอยู่ระหว่าง ${f.min}–${f.max}`); return false
+      }
+    }
+  }
+  return true
+}
+
+// CALCULATE — TDEE + Macros + Targets
+function calculate() {
+  const age = +document.getElementById('f-age').value
+  const height = +document.getElementById('f-height').value
+  const gender = document.getElementById('f-gender').value
+  const weight = +document.getElementById('f-weight').value
+  const fatPct = +document.getElementById('f-fat-pct').value
+  const muscle = +document.getElementById('f-muscle').value
+  const fatKg = +document.getElementById('f-fat-kg').value || weight * fatPct / 100
+  const goal = document.getElementById('f-goal').value
+  const activity = document.getElementById('f-activity').value
+
+  // BMR (Mifflin-St Jeor)
+  let bmr = gender === 'male'
+    ? (10 * weight) + (6.25 * height) - (5 * age) + 5
+    : (10 * weight) + (6.25 * height) - (5 * age) - 161
+
+  // TDEE
+  const actMult = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 }
+  const tdee = Math.round(bmr * (actMult[activity] || 1.55))
+
+  // Goal calories
+  let targetCal = tdee
+  if (goal === 'fat_loss') targetCal = tdee - 500
+  else if (goal === 'muscle_gain') targetCal = tdee + 300
+  targetCal = Math.max(1400, targetCal)
+
+  // Protein: 1.8g/kg for fat loss, 2.0g/kg for muscle
+  const proteinG = Math.round(weight * (goal === 'muscle_gain' ? 2.0 : 1.8))
+  const proteinKcal = proteinG * 4
+  const fatG = Math.round(targetCal * 0.25 / 9)
+  const fatKcal = fatG * 9
+  const carbG = Math.max(0, Math.round((targetCal - proteinKcal - fatKcal) / 4))
+
+  // Fat loss target
+  const targetFatPct = gender === 'male' ? 15 : 22
+  const targetFatKg = weight * targetFatPct / 100
+  const fatToLose = Math.max(0, fatKg - targetFatKg)
+  const weeksNeeded = Math.round(fatToLose / 0.5)
+  const targetWeight = weight - fatToLose
+
+  // Body fat category
+  let fatCategory = ''
+  if (gender === 'male') {
+    if (fatPct < 6) fatCategory = 'Essential Fat'
+    else if (fatPct < 14) fatCategory = 'Athletic'
+    else if (fatPct < 18) fatCategory = 'Fitness'
+    else if (fatPct < 25) fatCategory = 'Average'
+    else fatCategory = 'Obese'
+  } else {
+    if (fatPct < 14) fatCategory = 'Essential Fat'
+    else if (fatPct < 21) fatCategory = 'Athletic'
+    else if (fatPct < 25) fatCategory = 'Fitness'
+    else if (fatPct < 32) fatCategory = 'Average'
+    else fatCategory = 'Obese'
+  }
+
+  return {
+    age, height, gender, weight, fatPct, muscle, fatKg, goal, activity,
+    bmr: Math.round(bmr), tdee, targetCal, proteinG, fatG, carbG,
+    fatToLose: Math.round(fatToLose * 10) / 10,
+    targetWeight: Math.round(targetWeight * 10) / 10,
+    weeksNeeded, targetFatPct, fatCategory,
+    waterNeeded: Math.round(weight * 0.035 * 10) / 10
+  }
+}
+
+// RENDER RESULTS
+function renderResults() {
+  const r = calcResult
+  const goalLabel = { fat_loss: 'ลดไขมัน', muscle_gain: 'เพิ่มกล้ามเนื้อ', maintenance: 'รักษาสภาพ' }
+
+  document.getElementById('result-cards').innerHTML = `
+    <div class="result-card highlight"><div class="result-label">แคลอรี่/วัน</div><div class="result-val">${r.targetCal}</div><div class="result-unit">kcal</div></div>
+    <div class="result-card"><div class="result-label">โปรตีน</div><div class="result-val" style="color:var(--accent3)">${r.proteinG}g</div><div class="result-unit">/วัน</div></div>
+    <div class="result-card"><div class="result-label">คาร์บ</div><div class="result-val" style="color:var(--accent4)">${r.carbG}g</div><div class="result-unit">/วัน</div></div>
+    <div class="result-card"><div class="result-label">ไขมัน</div><div class="result-val" style="color:var(--accent2)">${r.fatG}g</div><div class="result-unit">/วัน</div></div>
+    <div class="result-card"><div class="result-label">TDEE</div><div class="result-val">${r.tdee}</div><div class="result-unit">kcal</div></div>
+    <div class="result-card"><div class="result-label">BMR</div><div class="result-val">${r.bmr}</div><div class="result-unit">kcal</div></div>
+  `
+
+  document.getElementById('result-summary').innerHTML = `
+    <div style="display:grid;gap:10px;font-size:.8em">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">สภาพร่างกาย</span><span style="color:var(--accent);font-weight:700">${r.fatCategory}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">เป้าหมาย</span><span style="font-weight:700">${goalLabel[r.goal]}</span></div>
+      ${r.goal === 'fat_loss' ? `
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">ต้องลดไขมัน</span><span style="color:var(--red);font-weight:700">${r.fatToLose} kg</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">น้ำหนักเป้าหมาย</span><span style="color:var(--accent3);font-weight:700">${r.targetWeight} kg</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">ระยะเวลาโดยประมาณ</span><span style="font-weight:700">${r.weeksNeeded} สัปดาห์</span></div>
+      ` : ''}
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">น้ำที่ควรดื่ม/วัน</span><span style="font-weight:700">${r.waterNeeded} ลิตร</span></div>
+    </div>
+  `
+
+  const sportsLabel = { weight_training: 'เวทเทรนนิ่ง', badminton: 'แบดมินตัน', running: 'วิ่ง', hyrox: 'Hyrox', swimming: 'ว่ายน้ำ', cycling: 'จักรยาน', football: 'ฟุตบอล', muaythai: 'มวย' }
+  const sportsHtml = selectedSports.length > 0
+    ? selectedSports.map(s => `• ${sportsLabel[s] || s}`).join('<br>')
+    : '• Base Program (เวท + คาร์ดิโอ)'
+
+  document.getElementById('plan-preview').innerHTML = `
+    <strong style="color:var(--text)">ตารางออกกำลังกาย:</strong><br>
+    ${sportsHtml}<br><br>
+    <strong style="color:var(--text)">โภชนาการ:</strong><br>
+    • โปรตีน ${r.proteinG}g · คาร์บ ${r.carbG}g · ไขมัน ${r.fatG}g<br>
+    • รวม ${r.targetCal} kcal/วัน<br><br>
+    <strong style="color:var(--text)">Dashboard ที่จะเห็น:</strong><br>
+    • ตารางออกกำลังกายปรับตามกีฬาที่เล่น<br>
+    • แผนอาหารปรับตาม Macro ของคุณ<br>
+    • ติดตามความคืบหน้าตามเวลา
+  `
+}
+
+// SAVE TO SUPABASE
+async function saveAndGo() {
+  if (!calcResult) { showAlert('กรุณาคำนวณข้อมูลก่อนบันทึก'); return }
+
+  const btn = document.getElementById('save-btn')
+  btn.innerHTML = '<span class="spinner"></span>กำลังบันทึก...'
+  btn.disabled = true
+
+  try {
+    // Re-verify session before saving
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) { window.location.href = 'index.html'; return }
+
+    const r = calcResult
+
+    await sb.from('profiles').upsert({
+      id: user.id,
+      age: r.age,
+      height_cm: r.height,
+      gender: r.gender,
+      goal: r.goal,
+      activity_level: r.activity,
+      sports: selectedSports,
+      updated_at: new Date().toISOString()
+    })
+
+    const record = {
+      user_id: user.id,
+      weight_kg: r.weight,
+      body_fat_pct: r.fatPct,
+      muscle_kg: r.muscle,
+      fat_kg: r.fatKg,
+      bmi: parseFloat(document.getElementById('f-bmi').value) || null,
+      visceral_fat: parseFloat(document.getElementById('f-visceral').value) || null,
+      inbody_score: parseFloat(document.getElementById('f-score').value) || null,
+      input_method: selectedMethod,
+      recorded_at: new Date().toISOString()
+    }
+
+    // Upload image to private bucket — store path only (not public URL)
+    if (uploadedFile) {
+      const ext = uploadedFile.type.includes('png') ? 'png' : 'jpg'
+      const filePath = `${user.id}/${Date.now()}.${ext}`
+      const { data: uploadData } = await sb.storage
+        .from('inbody-images')
+        .upload(filePath, uploadedFile, { contentType: uploadedFile.type })
+      if (uploadData) record.image_url = filePath
+    }
+
+    await sb.from('inbody_records').insert(record)
+    localStorage.setItem('calc_result', JSON.stringify({ ...r, sports: selectedSports }))
+    window.location.href = 'dashboard.html'
+
+  } catch (err) {
+    const alertEl = document.getElementById('save-alert')
+    alertEl.textContent = 'เกิดข้อผิดพลาด: ' + err.message
+    alertEl.className = 'alert error show'
+    btn.innerHTML = '💾 บันทึกและดูแผน'
+    btn.disabled = false
+  }
+}
+
+// UTILS
+function showAlert(msg) {
+  const el = document.getElementById('alert-box')
+  el.textContent = msg
+  el.className = 'alert error show'
+  setTimeout(() => el.className = 'alert', 4000)
+}
+
+// Drag & Drop
+const uploadArea = document.getElementById('upload-area')
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over') })
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'))
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault()
+  uploadArea.classList.remove('drag-over')
+  const file = e.dataTransfer.files[0]
+  if (!file) return
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    showAlert('รองรับเฉพาะ JPG, PNG, WebP เท่านั้น'); return
+  }
+  if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    showAlert(`ไฟล์ต้องมีขนาดไม่เกิน ${MAX_FILE_MB}MB`); return
+  }
+  uploadedFile = file
+  const reader = new FileReader()
+  reader.onload = ev => {
+    document.getElementById('preview-img').src = ev.target.result
+    document.getElementById('preview-img').style.display = 'block'
+    analyzeWithGemini(ev.target.result.split(',')[1])
+  }
+  reader.readAsDataURL(file)
+})
+</script>
+</body>
+</html>
