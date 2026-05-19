@@ -638,7 +638,7 @@ async function init() {
     document.getElementById('no-data').style.display = 'block'
   } else {
     document.getElementById('main-dashboard').style.display = 'block'
-    renderDashboard(userProfile, latestRec, records)
+    renderDashboard(userProfile, latestRec, recordsRes.data)
   }
 }
 
