@@ -338,14 +338,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
   <div class="user-greeting" id="greeting">สวัสดี</div>
   <div class="user-name" id="user-name">LOADING...</div>
   <div class="hero-sub" id="hero-sub"></div>
-  <button onclick="openProfileEditor()" id="hero-profile-btn" style="display:none;margin-top:14px;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:8px 14px 8px 8px;cursor:pointer;touch-action:manipulation;max-width:240px;width:100%">
-    <div id="hero-avatar-sm" style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;color:var(--accent);overflow:hidden;flex-shrink:0">?</div>
-    <div style="flex:1;min-width:0;text-align:left">
-      <div id="hero-profile-name" style="font-size:.8em;font-weight:700;color:var(--text);font-family:var(--font-b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">โปรไฟล์</div>
-      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m)">แก้ไขชื่อ · รูปโปรไฟล์</div>
-    </div>
-    <span style="font-size:.9em;flex-shrink:0">✏️</span>
-  </button>
 </div>
 
 <!-- NO DATA STATE -->
@@ -1261,23 +1253,6 @@ async function saveProfile() {
       nameSpan.textContent = name.split(' ')[0].toUpperCase()
       nameEl.textContent = ''
       nameEl.appendChild(nameSpan)
-    }
-
-    // Sync hero profile row
-    const heroNameEl = document.getElementById('hero-profile-name')
-    if (heroNameEl) heroNameEl.textContent = name || heroNameEl.textContent
-    const heroAvSmEl = document.getElementById('hero-avatar-sm')
-    if (heroAvSmEl) {
-      if (avatarUrl) {
-        const img = document.createElement('img')
-        img.src = avatarUrl
-        img.alt = 'avatar'
-        img.style.cssText = 'width:100%;height:100%;object-fit:cover'
-        heroAvSmEl.textContent = ''
-        heroAvSmEl.appendChild(img)
-      } else if (name) {
-        heroAvSmEl.textContent = name[0].toUpperCase()
-      }
     }
 
     if (!avatarFailed) {
@@ -2363,26 +2338,6 @@ async function init() {
   nameEl.textContent = ''
   nameEl.appendChild(nameSpan)
   document.getElementById('hero-sub').textContent = latestRec ? `อัปเดตล่าสุด: ${new Date(latestRec.recorded_at).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})}` : 'ยังไม่มีข้อมูล InBody'
-
-  // Hero profile row — populate name + avatar
-  const heroProfileBtn = document.getElementById('hero-profile-btn')
-  const heroAvatarSm = document.getElementById('hero-avatar-sm')
-  const heroProfileName = document.getElementById('hero-profile-name')
-  if (heroProfileName) heroProfileName.textContent = profileRes.data?.name || name.split(' ')[0]
-  const heroAvatarUrl = storedAvatarUrl || (rawAvatarUrl && /^https?:\/\//.test(rawAvatarUrl) ? rawAvatarUrl : null)
-  if (heroAvatarSm) {
-    if (heroAvatarUrl) {
-      const img = document.createElement('img')
-      img.src = heroAvatarUrl
-      img.alt = 'avatar'
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover'
-      heroAvatarSm.textContent = ''
-      heroAvatarSm.appendChild(img)
-    } else {
-      heroAvatarSm.textContent = (profileRes.data?.name || name)[0].toUpperCase()
-    }
-  }
-  if (heroProfileBtn) heroProfileBtn.style.display = 'inline-flex'
 
   document.getElementById('loading-screen').style.display = 'none'
   document.getElementById('topbar').style.display = 'flex'

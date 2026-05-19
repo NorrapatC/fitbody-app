@@ -140,7 +140,7 @@ serve(async (req) => {
 กฎ: ใช้อาหารไทยที่หาได้จริง หลากหลาย ไม่ซ้ำกับวันอื่น โปรตีนสูง น้ำมันน้อย เหมาะกับเป้าหมาย`
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
