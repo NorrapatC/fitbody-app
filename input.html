@@ -191,11 +191,11 @@ select.form-input option{background:var(--surface2);color:var(--text)}
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">อายุ (ปี) *</label>
-          <input type="number" class="form-input" id="f-age" placeholder="26" min="15" max="80">
+          <input type="number" class="form-input" id="f-age" placeholder="เช่น 25" min="15" max="80">
         </div>
         <div class="form-group">
           <label class="form-label">ส่วนสูง (cm) *</label>
-          <input type="number" class="form-input" id="f-height" placeholder="183" min="140" max="220">
+          <input type="number" class="form-input" id="f-height" placeholder="เช่น 170" min="140" max="220">
         </div>
       </div>
 
@@ -210,40 +210,39 @@ select.form-input option{background:var(--surface2);color:var(--text)}
         </div>
         <div class="form-group">
           <label class="form-label">น้ำหนัก (kg) *</label>
-          <input type="number" class="form-input" id="f-weight" placeholder="91.1" step="0.1">
+          <input type="number" class="form-input" id="f-weight" placeholder="เช่น 70.0" step="0.1">
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">%ไขมัน *</label>
-          <input type="number" class="form-input" id="f-fat-pct" placeholder="21.3" step="0.1">
+          <input type="number" class="form-input" id="f-fat-pct" placeholder="เช่น 20.0" step="0.1">
         </div>
         <div class="form-group">
           <label class="form-label">กล้ามเนื้อ (kg) *</label>
-          <input type="number" class="form-input" id="f-muscle" placeholder="41.2" step="0.1">
+          <input type="number" class="form-input" id="f-muscle" placeholder="เช่น 35.0" step="0.1">
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">มวลไขมัน (kg)</label>
-          <input type="number" class="form-input" id="f-fat-kg" placeholder="19.4" step="0.1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">InBody Score</label>
-          <input type="number" class="form-input" id="f-score" placeholder="82" min="0" max="100">
-        </div>
+      <!-- AUTO-CALC ROW: BMI + Fat kg computed live -->
+      <div id="auto-calc-row" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <span id="auto-bmi" style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#f5c842">⚡ BMI: —</span>
+        <span id="auto-fatkg" style="background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.15);border-radius:20px;padding:4px 12px;font-family:'DM Mono',monospace;font-size:.68em;color:#f5c842">⚡ ไขมัน: — kg</span>
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">ไขมันในช่องท้อง</label>
-          <input type="number" class="form-input" id="f-visceral" placeholder="8" min="1" max="20">
-        </div>
-        <div class="form-group">
-          <label class="form-label">BMI</label>
-          <input type="number" class="form-input" id="f-bmi" placeholder="27.2" step="0.1">
+      <!-- COLLAPSIBLE: InBody Score + Visceral Fat -->
+      <button type="button" class="collapse-toggle" onclick="toggleOptional(this)" style="background:transparent;border:1px dashed rgba(255,255,255,.12);border-radius:8px;padding:8px 14px;color:#5a6478;font-size:.76em;cursor:pointer;width:100%;text-align:left;margin-bottom:8px">▼ ข้อมูล InBody เพิ่มเติม (ไม่บังคับ)</button>
+      <div id="optional-section" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">InBody Score</label>
+            <input type="number" class="form-input" id="f-score" placeholder="เช่น 75" min="0" max="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ไขมันในช่องท้อง</label>
+            <input type="number" class="form-input" id="f-visceral" placeholder="เช่น 8" min="1" max="20">
+          </div>
         </div>
       </div>
     </div>
@@ -416,20 +415,23 @@ async function analyzeWithGemini(base64Data) {
 
 // FILL FORM FROM AI
 function fillFormFromAI(data) {
+  // fat_kg and bmi removed — both auto-calculated from weight/height/fat-pct
   const fieldMap = {
     weight_kg: 'f-weight', body_fat_pct: 'f-fat-pct', muscle_kg: 'f-muscle',
-    fat_kg: 'f-fat-kg', bmi: 'f-bmi', visceral_fat: 'f-visceral',
-    inbody_score: 'f-score', height_cm: 'f-height', age: 'f-age'
+    visceral_fat: 'f-visceral', inbody_score: 'f-score',
+    height_cm: 'f-height', age: 'f-age'
   }
   Object.entries(fieldMap).forEach(([key, id]) => {
     if (data[key] !== null && data[key] !== undefined) {
       const el = document.getElementById(id)
+      if (!el) return
       el.value = data[key]
       el.classList.add('ai-filled')
       aiFilledFields.add(id)
     }
   })
   document.getElementById('ai-badge').style.display = 'inline-flex'
+  updateAutoCalc()
 }
 
 // SPORTS TOGGLE
@@ -482,6 +484,7 @@ const FIELD_RULES = [
   { id: 'f-score',   name: 'InBody Score',  min: 0,   max: 100, required: false },
   { id: 'f-visceral',name: 'ไขมันในช่องท้อง', min: 1, max: 20, required: false },
 ]
+// Note: f-bmi and f-fat-kg removed — both are auto-calculated, not DOM inputs
 
 function validate() {
   for (const f of FIELD_RULES) {
@@ -508,7 +511,7 @@ function calculate() {
   const weight = +document.getElementById('f-weight').value
   const fatPct = +document.getElementById('f-fat-pct').value
   const muscle = +document.getElementById('f-muscle').value
-  const fatKg = +document.getElementById('f-fat-kg').value || weight * fatPct / 100
+  const fatKg = weight * fatPct / 100
   const goal = document.getElementById('f-goal').value
   const activity = document.getElementById('f-activity').value
 
@@ -644,7 +647,7 @@ async function saveAndGo() {
       body_fat_pct: r.fatPct,
       muscle_kg: r.muscle,
       fat_kg: r.fatKg,
-      bmi: parseFloat(document.getElementById('f-bmi').value) || null,
+      bmi: parseFloat((r.height > 0 && r.weight > 0) ? (r.weight / ((r.height / 100) ** 2)).toFixed(1) : null) || null,
       visceral_fat: parseFloat(document.getElementById('f-visceral').value) || null,
       inbody_score: parseFloat(document.getElementById('f-score').value) || null,
       input_method: selectedMethod,
@@ -681,6 +684,32 @@ function showAlert(msg) {
   el.className = 'alert error show'
   setTimeout(() => el.className = 'alert', 4000)
 }
+
+// COLLAPSIBLE: InBody optional section
+function toggleOptional(el) {
+  const sec = document.getElementById('optional-section')
+  const open = sec.style.display !== 'none'
+  sec.style.display = open ? 'none' : 'block'
+  el.textContent = (open ? '▼' : '▲') + ' ข้อมูล InBody เพิ่มเติม (ไม่บังคับ)'
+}
+
+// AUTO-CALC: live BMI + fat_kg display
+function updateAutoCalc() {
+  const w = parseFloat(document.getElementById('f-weight').value)
+  const h = parseFloat(document.getElementById('f-height').value)
+  const fp = parseFloat(document.getElementById('f-fat-pct').value)
+  const row = document.getElementById('auto-calc-row')
+  if (w > 0 || h > 0 || fp > 0) {
+    row.style.display = 'flex'
+    const bmi = (h > 0 && w > 0) ? (w / ((h / 100) ** 2)).toFixed(1) : '—'
+    const fatKg = (w > 0 && fp > 0) ? (w * fp / 100).toFixed(1) : '—'
+    document.getElementById('auto-bmi').textContent = '⚡ BMI: ' + bmi
+    document.getElementById('auto-fatkg').textContent = '⚡ ไขมัน: ' + fatKg + ' kg'
+  }
+}
+;['f-weight', 'f-height', 'f-fat-pct'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateAutoCalc)
+})
 
 // Drag & Drop
 const uploadArea = document.getElementById('upload-area')

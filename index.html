@@ -152,21 +152,38 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 
     <!-- REGISTER FORM -->
     <div id="register-form" style="display:none">
+      <div style="margin-bottom:20px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.4em;letter-spacing:.06em;color:var(--accent);margin-bottom:4px">START YOUR TRANSFORMATION</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.65em;color:var(--muted);margin-bottom:12px">ฟรี · ไม่มีโฆษณา · ข้อมูลของคุณเป็นของคุณ</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="border:1px solid rgba(245,200,66,.2);background:rgba(245,200,66,.05);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:.6em;color:var(--accent)">⚡ TDEE + Macro</span>
+          <span style="border:1px solid rgba(245,200,66,.2);background:rgba(245,200,66,.05);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:.6em;color:var(--accent)">🏋️ Workout Plan</span>
+          <span style="border:1px solid rgba(245,200,66,.2);background:rgba(245,200,66,.05);border-radius:20px;padding:3px 10px;font-family:'DM Mono',monospace;font-size:.6em;color:var(--accent)">📊 Progress Track</span>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">ชื่อ-นามสกุล</label>
-        <input type="text" class="form-input" id="reg-name" placeholder="Norrapat C.">
+        <input type="text" class="form-input" id="reg-name" placeholder="เช่น Somchai K.">
       </div>
       <div class="form-group">
         <label class="form-label">Email</label>
         <input type="email" class="form-input" id="reg-email" placeholder="your@email.com">
       </div>
-      <div class="form-group">
+      <div class="form-group" style="position:relative">
         <label class="form-label">Password (อย่างน้อย 6 ตัวอักษร)</label>
-        <input type="password" class="form-input" id="reg-password" placeholder="••••••••">
+        <input type="password" class="form-input" id="reg-password" placeholder="••••••••" oninput="checkPasswordStrength(this.value)" style="padding-right:42px">
+        <button type="button" onclick="togglePwVisibility()" style="position:absolute;right:12px;bottom:11px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:2px">👁</button>
+      </div>
+      <div id="pw-strength-wrap" style="margin-top:-10px;margin-bottom:14px;display:none">
+        <div style="height:3px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;margin-bottom:4px">
+          <div id="pw-strength-bar" style="height:100%;border-radius:3px;transition:all .3s;width:0"></div>
+        </div>
+        <div id="pw-strength-label" style="font-family:'DM Mono',monospace;font-size:.62em;color:var(--muted)"></div>
       </div>
       <button class="btn btn-primary" id="register-btn" onclick="registerWithEmail()">
-        สมัครสมาชิก
+        เริ่มต้นฟรี →
       </button>
+      <p style="text-align:center;font-family:'DM Mono',monospace;font-size:.62em;color:var(--muted);margin-top:6px">การสมัครถือว่ายอมรับ Privacy Policy · ไม่มีการขายข้อมูล</p>
     </div>
   </div>
 
@@ -263,13 +280,47 @@ async function registerWithEmail() {
 
   if (error) {
     showAlert('เกิดข้อผิดพลาด: ' + error.message)
-    btn.innerHTML = 'สมัครสมาชิก'
+    btn.innerHTML = 'เริ่มต้นฟรี →'
     btn.disabled = false
   } else {
-    showAlert('✅ สมัครสำเร็จ! กรุณาตรวจสอบ Email เพื่อยืนยัน', 'success')
-    btn.innerHTML = 'สมัครสมาชิก'
-    btn.disabled = false
+    document.getElementById('register-form').innerHTML = `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:3em;margin-bottom:16px">✉️</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.8em;letter-spacing:.06em;color:var(--accent3);margin-bottom:8px">CHECK YOUR EMAIL</div>
+        <div style="font-size:.8em;color:var(--muted);line-height:1.8;margin-bottom:20px">ส่งลิงก์ยืนยันไปที่<br><span style="color:var(--text);font-family:'DM Mono',monospace">${email}</span><br>กดลิงก์เพื่อเริ่มใช้งาน</div>
+        <a href="https://mail.google.com" target="_blank" style="display:inline-block;padding:10px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.82em;text-decoration:none">เปิด Gmail →</a>
+      </div>
+    `
   }
+}
+
+// Password visibility toggle
+function togglePwVisibility() {
+  const inp = document.getElementById('reg-password')
+  inp.type = inp.type === 'password' ? 'text' : 'password'
+}
+
+// Password strength indicator
+function checkPasswordStrength(val) {
+  const wrap = document.getElementById('pw-strength-wrap')
+  const bar = document.getElementById('pw-strength-bar')
+  const label = document.getElementById('pw-strength-label')
+  if (!val) { wrap.style.display = 'none'; return }
+  wrap.style.display = 'block'
+  let score = 0
+  if (val.length >= 6) score++
+  if (val.length >= 10) score++
+  if (/[0-9]/.test(val) && /[a-zA-Z]/.test(val)) score++
+  const levels = [
+    { width: '33%', color: '#f87171', text: 'อ่อนมาก' },
+    { width: '66%', color: '#f5c842', text: 'ปานกลาง' },
+    { width: '100%', color: '#4ade80', text: '✓ ดี' },
+  ]
+  const lv = levels[Math.min(score, 2)]
+  bar.style.width = lv.width
+  bar.style.background = lv.color
+  label.textContent = lv.text
+  label.style.color = lv.color
 }
 
 // Start
