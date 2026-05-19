@@ -321,6 +321,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 const { createClient } = supabase
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let currentUser = null, userProfile = null, latestRecord = null, calcData = null
+let todayLogs = [], diaryMealType = 'breakfast'
 
 // ======= EXERCISE DATABASE =======
 const EXERCISES = {
@@ -394,7 +395,59 @@ const EXERCISES = {
   agility_ladder:{name:"Agility Ladder",sets:"4×30วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วาง Ladder บนพื้น","วิ่ง In-Out, Lateral, Ickey Shuffle","ก้าวเท้าเร็ว แม่นยำ","จับเวลา ลดลงทุกสัปดาห์"],tip:"💡 Agility ฝึกเท้าให้ Quick — ช่วยทุกกีฬา"},
   cycling_interval:{name:"Cycling Interval",sets:"8×1 นาที (พัก 1 นาที)",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["วอร์มอัพ 10 นาที Low Resistance","เพิ่ม Resistance สูง ปั่น 1 นาทีหนัก","ลด Resistance พัก 1 นาที","ทำ 8 รอบ แล้ว Cool down"],tip:"💡 HIIT Cycling เผาไขมันได้มากใน 30 นาที"},
   zone2_cycle:{name:"Zone 2 Cycling",sets:"45–60 นาที",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["ตั้ง Resistance ให้ HR อยู่ 115–136 bpm","รักษา Cadence 80–90 RPM","Breathing สม่ำเสมอ พูดได้","Cool down 5 นาที"],tip:"💡 Zone 2 Cycling = Aerobic Base Building เหมือน Zone 2 Run"},
+  hill_climb_cycle:{name:"Hill Climb Simulation",sets:"5×3 นาที (พัก 2 นาที)",muscles:["leg","glute"],primary:["leg"],secondary:["glute"],steps:["เพิ่ม Resistance สูงมาก เลียนแบบการขึ้นเขา","Cadence ลดลง 60–70 RPM","ออกแรงขา Power ทุก Stroke","ลด Resistance พัก 2 นาที แล้วทำซ้ำ"],tip:"💡 Hill Climb สร้าง Leg Power + VO2Max เร็วกว่า Flat Ride"},
   mountainclimber:{name:"Mountain Climber",sets:"4×40วิ",muscles:["core","leg"],primary:["core"],secondary:["leg"],steps:["เริ่มท่า Plank สูง แขนเหยียด","ดึงเข่าขวาเข้าหาอก สลับเร็ว","สะโพกไม่ขึ้นลง ลำตัวตรง","เร็วขึ้นเรื่อยๆ"],tip:"💡 ยิ่งเร็วยิ่งเผาไขมันมาก สะโพกไม่ขึ้น"},
+  dribbling_drill:{name:"Football Dribbling Drill",sets:"4×60วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["วาง Cone เป็นเส้น Zigzag","ดริบบอลผ่าน Cone ทั้งซ้ายและขวา","เพิ่มความเร็วทุกรอบ","เน้น Close Control ลูกอยู่ใกล้เท้า"],tip:"💡 Touch บอลทุก 2–3 ก้าว ยิ่งระยะสั้นยิ่งควบคุมดี"},
+  shooting_drill:{name:"Shooting Practice",sets:"5×10 ชุด",muscles:["leg","core"],primary:["leg"],secondary:["core"],steps:["ตั้งตำแหน่ง Run-up 3–4 ก้าว","เท้า Support วางข้างลูก ชี้ไปเป้า","แกว่งขาตีเต็มที่ Lock ข้อเท้า","Follow-through ขาตามลูก"],tip:"💡 Accuracy ก่อน Power — ฝึกในระยะ 12-16 m ก่อน"},
+  header_drill:{name:"Heading Drill",sets:"3×15 ครั้ง",muscles:["core","leg"],primary:["core"],secondary:["leg"],steps:["ยืนห่าง Partner 3–5 เมตร","กระโดดจังหวะที่ถูก พุ่งหัวออกไป","ใช้หน้าผากไม่ใช่ยอดหัว","ตากางออก อย่าหลับตา"],tip:"💡 จังหวะกระโดดสำคัญกว่าความสูง — Timing เป็น Skill"},
+
+  // ===== YOGA / PILATES =====
+  sun_salutation:{name:"Sun Salutation A",sets:"5 รอบ ต่อเนื่อง",muscles:["full","core","shoulder"],primary:["full"],secondary:["core"],steps:["ยืนตรง Tadasana หายใจเข้า","ยกแขนขึ้น Upward Salute","โน้มตัวไปหน้า Forward Fold","กระโดด/ก้าวไปท่า Plank","ลงท่า Chaturanga → Up Dog → Down Dog → ยืนตรง"],tip:"💡 Sun Salutation อุ่นร่างกายทั้งตัวใน 5 รอบ — ทำทุกเช้า"},
+  warrior_flow:{name:"Warrior Sequence 1→2→3",sets:"3 รอบ/ข้าง",muscles:["leg","glute","core","shoulder"],primary:["leg"],secondary:["glute","core"],steps:["Warrior 1: ก้าวหน้า งอเข่า 90° แขนขึ้น","Warrior 2: กางแขนออก หันสะโพกด้านข้าง","Warrior 3: โน้มตัวไปหน้าขาเดียว แขนขนานพื้น","กลับ Warrior 1 แล้วสลับข้าง"],tip:"💡 Warrior 3 ฝึก Balance + Hip Stability — ช่วย Running + Cycling"},
+  hip_opener:{name:"Hip Opener Flow",sets:"3 นาที/ข้าง",muscles:["glute","leg"],primary:["glute"],secondary:["leg"],steps:["Pigeon Pose: เข่าหน้าวางพื้น ขาหลังเหยียด","หน้าอกลง ทิ้งน้ำหนัก 90 วิ","Lizard Pose: ก้าวหน้า มือสองข้างในเท้า","Dragon Pose: เข่าหลังวางพื้น เอียงสะโพกลง"],tip:"💡 Hip Flexor ตึงจาก Sitting ทำให้ Squat ไม่ลึก — Hip Opener แก้ได้"},
+  spine_mobility:{name:"Spine Mobility Flow",sets:"3×60วิ",muscles:["core","back"],primary:["core"],secondary:["back"],steps:["Cat-Cow: มือเข่าลงพื้น โก่งหลัง-หลังนูน","Thread the Needle: แขนสอดใต้ลำตัว","Seated Spinal Twist: นั่งขาเหยียด หมุนตัว","Child's Pose: ยืดหลัง พักสุดท้าย"],tip:"💡 Spine Mobility ลด Back Pain + เพิ่ม Rotation Power ทุกกีฬา"},
+  plank_yoga:{name:"Plank Progression",sets:"3 ชุด",muscles:["core","shoulder"],primary:["core"],secondary:["shoulder"],steps:["Forearm Plank 45 วิ — Core แน่น สะโพกไม่ขึ้น","Side Plank ซ้าย 30 วิ — กองสะโพกขึ้น","Side Plank ขวา 30 วิ","High Plank + Shoulder Tap 15/ข้าง — ไม่แกว่ง"],tip:"💡 Plank คือ Foundation ของ Core Strength ทุกกีฬา"},
+  restorative:{name:"Restorative Cool-down",sets:"10 นาที",muscles:["full"],primary:["full"],secondary:[],steps:["Legs-up-the-Wall 3 นาที — ลดบวมขา","Supine Twist ซ้ายขวา 2 นาที/ข้าง","Happy Baby: นอนหงาย จับเท้า 1 นาที","Savasana: นอนราบ หายใจลึก 2 นาที"],tip:"💡 Restorative ฟื้นฟู Nervous System — สำคัญไม่แพ้ Training"},
+
+  // ===== CROSSFIT / HIIT =====
+  amrap_circuit:{name:"AMRAP 15 นาที",sets:"As Many Rounds As Possible",muscles:["full"],primary:["full"],secondary:[],steps:["10 Air Squats","10 Push-ups","10 Sit-ups","200m Run หรือ 250m Row","นับ Rounds ให้ได้มากที่สุดใน 15 นาที"],tip:"💡 AMRAP ฝึก Pacing — อย่า Go All-out รอบแรก จะหมดแรงก่อนหมดเวลา"},
+  power_clean:{name:"Power Clean",sets:"5×3 (หนัก 70% 1RM)",muscles:["leg","back","shoulder"],primary:["leg"],secondary:["back","shoulder"],steps:["ท่าเริ่มเหมือน Deadlift บาร์เหนือ Midfoot","ดึงบาร์ขึ้นอย่างระเบิด Triple Extension (ข้อเท้า-เข่า-สะโพก)","Shrug ไหล่ขึ้น ดึงข้อศอกขึ้นสูง","Catch บาร์บนไหล่ ลงท่า Front Squat เล็กน้อย"],tip:"💡 Power Clean = Speed + Strength + Coordination ใน 1 Lift"},
+  double_under:{name:"Double Under Jump Rope",sets:"5×30 ครั้ง (พัก 30วิ)",muscles:["calf","shoulder","leg"],primary:["calf"],secondary:["shoulder"],steps:["จับเชือกสั้นกว่า Single Under เล็กน้อย","กระโดดสูงขึ้น 2–3 ซม. จากปกติ","ข้อมือหมุนเร็ว 2 รอบต่อ 1 Jump","ปลายเท้าลงก่อน เข่างอเล็กน้อย"],tip:"💡 Double Under ฝึก Timing + Calf Endurance — ช่วย Hyrox + CrossFit"},
+  muscle_up:{name:"Bar Muscle-up",sets:"3×3–5",muscles:["back","arm","core","chest"],primary:["back"],secondary:["arm","chest"],steps:["จับบาร์กว้างกว่าไหล่เล็กน้อย","Pull-up อย่างระเบิด ดึงอก Touch บาร์","Transition: หมุนข้อมือเหนือบาร์","กด Dip ขึ้น แขนเหยียดสุด"],tip:"💡 Muscle-up ต้องการ: Explosive Pull + Fast Transition — ฝึก Kipping Swing ก่อน"},
+  kb_complex:{name:"KB Complex",sets:"4 รอบ (5 รายการ)",muscles:["full","core","leg"],primary:["full"],secondary:[],steps:["5 KB Deadlift → 5 KB Clean → 5 KB Press","5 KB Front Squat → 5 KB Swing — ไม่วางลงพื้น","พัก 90 วิ หลังครบ 1 รอบ","ทำซ้ำ 4 รอบ"],tip:"💡 KB Complex คือ Full-body Conditioning ใน 1 เครื่องมือ"},
+  emom:{name:"EMOM Workout",sets:"12 นาที (ทุกนาที)",muscles:["full"],primary:["full"],secondary:[],steps:["นาที 1: 10 Burpees หรือ 15 Pull-ups","นาที 2: 15 KB Swings หรือ 20 Push-ups","นาที 3: 10 Box Jumps หรือ 200m Run","ที่เหลือในแต่ละนาที = พัก ทำต่อนาทีถัดไป"],tip:"💡 EMOM สอน Time Management — ยิ่งเร็วยิ่งพักนาน"},
+
+  // ===== BOXING =====
+  jab_cross_combo:{name:"Jab-Cross-Hook Combo",sets:"5×2 นาที (พัก 1 นาที)",muscles:["shoulder","core","leg"],primary:["shoulder"],secondary:["core"],steps:["ท่า Orthodox: เท้าซ้ายหน้า Guard มือสองข้าง","Jab: ยื่นหมัดซ้ายตรง ส่งน้ำหนักไปหน้าเล็กน้อย","Cross: หมัดขวาระเบิด หมุนสะโพกและเท้า","Hook: งอข้อศอก 90° หมุนตัวพร้อมกัน"],tip:"💡 Power มาจาก Ground — ดันพื้นด้วยเท้าขวา หมุนสะโพก แล้วค่อย Shoulder"},
+  boxing_defense:{name:"Slip & Roll Defense",sets:"4×90วิ",muscles:["core","leg"],primary:["core"],secondary:["leg"],steps:["Slip Outside: ย้ายหัวออกด้านนอกหมัด Jab","Slip Inside: ย้ายหัวเข้าด้านใน Cross","Roll Under: งอเข่า ลอดใต้ Hook","Parry: ใช้มือเบี่ยงหมัด พร้อม Counter"],tip:"💡 Defense คือ Art — นักชกดีต้อง Make Opponent Miss ไม่ใช่แค่ Block"},
+  boxing_footwork:{name:"Boxing Footwork Drill",sets:"4×60วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["Bounce Step: กระโดดเล็กๆ สลับเท้าตลอด","Advance: ก้าวหน้าซ้ายก่อน ขวาตาม","Retreat: ถอยหลังขวาก่อน ซ้ายตาม","Lateral: ด้านข้าง เท้าไม่ไขว้กัน"],tip:"💡 Footwork ดี = อยู่ใน Range ที่ถนัด ออกนอก Range ของคู่แข่ง"},
+  speed_bag:{name:"Speed Bag",sets:"5×2 นาที",muscles:["shoulder","arm"],primary:["shoulder"],secondary:["arm"],steps:["ยืนหน้า Speed Bag ระดับหน้า","ตีด้วยหลังมือ สลับซ้ายขวาในจังหวะ","Rhythm: ตี-ตี-ตี (3 Beat Loop)","ค่อยๆ เร็วขึ้น ไม่ต้องแรง"],tip:"💡 Speed Bag ฝึก Hand-Eye Coordination + Shoulder Endurance"},
+  uppercut_body:{name:"Body + Uppercut Combo",sets:"4×2 นาที",muscles:["core","shoulder","leg"],primary:["shoulder"],secondary:["core"],steps:["Body Shot ซ้าย: งอเข่า ตีด้านข้างลำตัว","Body Shot ขวา: หมุนสะโพก ตี Liver","Uppercut ซ้าย: ดันขึ้นจากล่าง","Uppercut ขวา: ระเบิดขา → สะโพก → ไหล่"],tip:"💡 Body Shot เปิดทาง Head Shot — Combination ทำให้ Defense พัง"},
+
+  // ===== TENNIS =====
+  forehand_topspin:{name:"Forehand Topspin Drill",sets:"4×15 ลูก",muscles:["shoulder","core","leg"],primary:["shoulder"],secondary:["core"],steps:["Split Step เมื่อคู่แข่งตี","หมุนไหล่ปิด เท้าขวางาน","แกว่งไม้ต่ำ→สูง Brush ลูกด้านหลัง","Follow-through เหนือไหล่ซ้าย"],tip:"💡 Topspin มาจาก Brush ไม่ใช่ Power — ยิ่ง Brush ยิ่ง Spin"},
+  backhand_drill:{name:"Two-Handed Backhand",sets:"4×15 ลูก",muscles:["shoulder","core"],primary:["shoulder"],secondary:["core"],steps:["Split Step → หมุนไหล่ปิดด้านซ้าย","วางไม้ต่ำ มือซ้ายจับล่าง มือขวาบน","แกว่งขึ้นสม่ำเสมอ Contact Point หน้าตัว","Follow-through สูงทางขวา"],tip:"💡 Backhand แข็งแกร่งเมื่อ Shoulder Turn ดี — อย่า Hit ด้วยแขนอย่างเดียว"},
+  tennis_serve:{name:"Serve Practice",sets:"3×20 ลูก",muscles:["shoulder","core","leg"],primary:["shoulder"],secondary:["core","leg"],steps:["ยืน 45° กับ Baseline เท้าหน้าชี้ Net Post","Toss ขึ้นตรง 1 o'clock Position","Knee Bend + Coil: งอเข่า หมุนไหล่","Pronation: หมุนหน้าแขนลง Swing ผ่านลูก"],tip:"💡 Serve คือ Weapon ที่สุด — ถ้าเสิร์ฟดีไม่ต้องวิ่งหนัก"},
+  tennis_footwork:{name:"Tennis Footwork Patterns",sets:"4×90วิ",muscles:["leg","calf"],primary:["leg"],secondary:["calf"],steps:["Split Step ทุกครั้งที่คู่แข่งตี","Side Shuffle ไปลูก ไม่ Crossover","Recovery Step: กลับ Baseline หลังตี","Approach: วิ่งเข้า Net ด้วย Ad Step"],tip:"💡 85% ของ Tennis คือ Footwork — ฝึก Movement ดีกว่าฝึกตีลูก"},
+  volley_drill:{name:"Volley at Net",sets:"3×20 ลูก",muscles:["shoulder","core"],primary:["shoulder"],secondary:["core"],steps:["ยืน 2–3 ก้าวหลัง Net","Punch Volley — Backswing น้อยมาก","Contact หน้าตัว กด Face ไม้ลง","Volley ยิ่งเงียบยิ่งดี — Control ไม่ใช่ Power"],tip:"💡 Volley ไม่ใช่ Groundstroke — Short Backswing = More Control"},
+
+  // ===== BASKETBALL =====
+  dribble_combo:{name:"Ball Handling Combo",sets:"4×60วิ",muscles:["arm","calf"],primary:["arm"],secondary:["calf"],steps:["Stationary: Crossover → Between Legs → Behind Back","Power Dribble ต่ำ 30 วิ","Speed Dribble ในพื้นที่ 30 วิ","Figure-8 Between Legs"],tip:"💡 Handle Ball ต่ำ = ยากโดน Steal ฝึกจนไม่ต้องมองมือ"},
+  shooting_form:{name:"Shooting Form Drill",sets:"5×20 ลูก",muscles:["leg","shoulder","arm"],primary:["leg"],secondary:["shoulder"],steps:["BEEF: Balance-Eyes-Elbow-Follow through","งอเข่า ส่ง Energy ขึ้นมาแขน","ข้อมืองอ Release ลูก","Follow-through: มือค้างไว้ดูวงโค้ง"],tip:"💡 Shooting มาจากขา — Leg Drive ส่งพลังขึ้น ไม่ใช่แขน"},
+  defensive_slide:{name:"Defensive Slide",sets:"4×30m",muscles:["leg","calf","glute"],primary:["leg"],secondary:["glute"],steps:["ท่า Athletic Stance: เข่างอ สะโพกต่ำ","Slide ซ้ายขวา เท้าไม่ข้ามกัน","ไม่ตั้งตรงระหว่าง Slide","ไม่วิ่ง — Slide เสมอ"],tip:"💡 On-Ball Defense — อยู่ต่ำ อยู่ระหว่าง Offensive Player กับ Basket เสมอ"},
+  vert_jump:{name:"Vertical Jump Training",sets:"4×8",muscles:["leg","glute","calf"],primary:["leg"],secondary:["glute","calf"],steps:["Drop Jump: ก้าวลงจาก Box สูง 30 cm","Touch พื้น ระเบิดขึ้นทันที","Minimize Ground Contact Time","Arm Swing พร้อมกับ Jump"],tip:"💡 Reactive Strength คือ Key — Ground Contact Time ยิ่งสั้น ยิ่งกระโดดสูง"},
+
+  // ===== VOLLEYBALL =====
+  spike_approach:{name:"3-Step Spike Approach",sets:"3×15 ครั้ง",muscles:["leg","glute","shoulder"],primary:["leg"],secondary:["shoulder"],steps:["3 ก้าว: ซ้าย → ขวา → ซ้าย-ขวา (ซ้ายมือ)","ก้าวสุดท้ายกว้าง Brake + ระเบิดขึ้น","แกว่งแขนขึ้น Contact ลูกสูงสุด","Wrist Snap ลง ส่ง Topspin"],tip:"💡 Jump ตรงไม่ใช่ Forward — ถ้า Drift หน้าแปลว่า Approach ผิด"},
+  volleyball_serve:{name:"Topspin Serve",sets:"3×20 ลูก",muscles:["shoulder","core"],primary:["shoulder"],secondary:["core"],steps:["ยืน 3 ก้าวหลัง End Line","Toss ขึ้นหน้าไหล่ตีลูก","สะโพกหมุนออกแรง","Contact ลูกสูง Snap Wrist ลง"],tip:"💡 Topspin Serve ลงพื้นแรงกว่า Float — ยากรับกว่ามาก"},
+  dig_receive:{name:"Forearm Pass (Dig)",sets:"4×20 ลูก",muscles:["leg","core","arm"],primary:["arm"],secondary:["core","leg"],steps:["Platform: แขนสองข้างชิดกัน ข้อมือล็อค","งอเข่าต่ำ น้ำหนักหน้าเท้า","Contact บนแขน ไม่ใช่มือ","Angle Platform ชี้ไปหา Target"],tip:"💡 Passing ดี = Setter ทำงานง่าย = Attack ดี — Foundation ของ Volleyball"},
+  block_timing:{name:"Blocking Drill",sets:"3×15 ครั้ง",muscles:["leg","glute","shoulder"],primary:["leg"],secondary:["shoulder"],steps:["ยืนหน้า Net ท่า Athletic Stance","Read: มองไหล่และแขนของ Attacker","Jump ช้ากว่า Attacker เล็กน้อย","Hands Penetrate Over Net กด Angle"],tip:"💡 Block Jump ช้ากว่า Attack Jump 0.5 วิ — Block ที่เร็วเกินคือ Block ล่า"},
+
+  // ===== ROWING (OUTDOOR) =====
+  rowing_catch:{name:"Rowing Technique — Catch to Finish",sets:"5×3 นาที (พัก 2 นาที)",muscles:["back","leg","core","arm"],primary:["back"],secondary:["leg","core"],steps:["Catch: งอเข่าสุด ลำตัวโน้มหน้า ไม้จมน้ำ","Drive: ดันขาก่อน → โน้มตัวไปหลัง → ดึงแขน","Finish: แขนดึงมาหาท้อง ลำตัวเอน 10–15° หลัง","Recovery: แขนออกก่อน → โน้มตัวหน้า → งอเข่า"],tip:"💡 Sequencing คือ Key — Legs → Body → Arms ไม่ใช่ทุกอย่างพร้อมกัน"},
+  power_10:{name:"Power 10 Strokes",sets:"6×10 Strokes",muscles:["back","leg","core"],primary:["back"],secondary:["leg"],steps:["วอร์มอัพ 5 นาที Rate ต่ำ","สัญญาณ: เพิ่ม Rate + Power 10 Strokes","ทุก Stroke ออกแรงเต็มที่","กลับ Rate ต่ำ พัก แล้วทำซ้ำ"],tip:"💡 Power 10 สอน Intensity Control — เหมือน Sprinting ใน Rowing"},
+  steady_state_row:{name:"Steady State Rowing",sets:"30–45 นาที",muscles:["back","leg","core"],primary:["back"],secondary:["leg"],steps:["Rate: 18–22 spm (Strokes Per Minute)","HR อยู่ Zone 2: 115–136 bpm","Focus Technique ตลอด ไม่แค่ออกแรง","Cool down Rate 16–18 spm 5 นาที"],tip:"💡 Low Rate ≠ Easy — ทุก Stroke ต้องมี Power มาก แต่ Rate ต่ำ"},
+  rowing_intervals:{name:"2000m Intervals",sets:"4×2000m (พัก 5 นาที)",muscles:["back","leg","core","arm"],primary:["back"],secondary:["leg"],steps:["Target Pace: 5–10 วิ/500m เร็วกว่า Steady State","Race Pace ใน 500m แรก ลด 2 วิ","กลาง 1000m รักษา Pace","500m สุดท้าย เพิ่ม Rate + Push"],tip:"💡 2000m คือ Rowing Race Distance — เทียบกับตัวเองทุกสัปดาห์"},
 }
 
 // ======= MUSCLE SVG =======
@@ -469,9 +522,24 @@ function getIcon(k){return{
   zone2run:'🏃',tempo_run:'⏱️',interval_400:'🏃',strides:'💨',long_run:'🌄',
   freestyle_drill:'🏊',kick_set:'🦵',pull_set:'💪',swim_interval:'⏱️',
   shadow_boxing:'🥊',heavy_bag:'🥊',jump_rope:'🪢',core_muay:'🎯',
-  sprint_interval:'⚡',agility_ladder:'🪜',cycling_interval:'🚴',zone2_cycle:'🚴',
-  mountainclimber:'🧗'
+  sprint_interval:'⚡',agility_ladder:'🪜',cycling_interval:'🚴',zone2_cycle:'🚴',hill_climb_cycle:'🚵',
+  mountainclimber:'🧗',dribbling_drill:'⚽',shooting_drill:'🎯',header_drill:'🏟️',
+  sun_salutation:'🌅',warrior_flow:'🧘',hip_opener:'🦋',spine_mobility:'🌀',plank_yoga:'🏔️',restorative:'😌',
+  amrap_circuit:'⏱️',power_clean:'⚡',double_under:'🪢',muscle_up:'💪',kb_complex:'🔔',emom:'🕐',
+  jab_cross_combo:'🥊',boxing_defense:'🛡️',boxing_footwork:'👣',speed_bag:'🎵',uppercut_body:'💢',
+  forehand_topspin:'🎾',backhand_drill:'🎾',tennis_serve:'🎯',tennis_footwork:'👣',volley_drill:'🕸️',
+  dribble_combo:'🏀',shooting_form:'🎯',defensive_slide:'🛡️',vert_jump:'🚀',
+  spike_approach:'🏐',volleyball_serve:'💨',dig_receive:'🤲',block_timing:'🚫',
+  rowing_catch:'🚣',power_10:'⚡',steady_state_row:'🌊',rowing_intervals:'🏁',
 }[k]||'💪'}
+
+// ======= SUBCATEGORY HEADER HELPER =======
+function subHead(dot, label, sub) {
+  return `<div class="card-title" style="font-size:.78em;margin-top:14px;margin-bottom:6px">
+    <span class="dot" style="background:${dot}"></span>${label}
+    ${sub?`<span style="font-size:.72em;color:var(--muted);font-weight:400">${sub}</span>`:''}
+  </div>`
+}
 
 // ======= GENERATE WORKOUT BASED ON SPORTS + GOAL =======
 function generateWorkoutPlan(sports, goal, cr) {
@@ -484,164 +552,323 @@ function generateWorkoutPlan(sports, goal, cr) {
   const hasCycle = has('cycling')
   const hasFoot = has('football')
   const hasMuay = has('muaythai')
+  const hasYoga = has('yoga')
+  const hasCF = has('crossfit')
+  const hasBox = has('boxing')
+  const hasTennis = has('tennis')
+  const hasBball = has('basketball')
+  const hasVball = has('volleyball')
+  const hasRow = has('rowing')
   const noSport = sports.length === 0
 
   // ---- WEEK SCHEDULE ----
   let days = []
-  if (hasWT || noSport) {
-    days.push(
-      {name:'MON',icon:'🏋️',type:'PUSH',cls:'dt-w',mins:'50 min'},
-      {name:'WED',icon:'🏋️',type:'PULL',cls:'dt-w',mins:'50 min'},
-      {name:'FRI',icon:'🦵',type:'LEGS',cls:'dt-w',mins:'55 min'}
-    )
-  }
-  if (hasBad) days.push({name:'TUE',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'90 min'},{name:'SAT',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'120 min'})
+  if (hasWT || noSport) days.push(
+    {name:'MON',icon:'🏋️',type:'PUSH',cls:'dt-w',mins:'50 min'},
+    {name:'WED',icon:'🏋️',type:'PULL',cls:'dt-w',mins:'50 min'},
+    {name:'FRI',icon:'🦵',type:'LEGS',cls:'dt-w',mins:'55 min'}
+  )
+  if (hasBad) days.push({name:'TUE',icon:'🏸',type:'BADMINTON',cls:'dt-a',mins:'90 min'},{name:'SAT',icon:'🏸',type:'MATCH',cls:'dt-a',mins:'120 min'})
   if (hasRun) days.push({name:'TUE',icon:'🏃',type:'ZONE 2',cls:'dt-c',mins:'40 min'},{name:'THU',icon:'🏃',type:'INTERVALS',cls:'dt-h',mins:'30 min'},{name:'SAT',icon:'🏃',type:'LONG RUN',cls:'dt-c',mins:'75 min'})
-  if (hasHyrox) days.push({name:'THU',icon:'🔥',type:'HYROX SIM',cls:'dt-h',mins:'40 min'},{name:'SAT',icon:'🔥',type:'HYROX STR',cls:'dt-h',mins:'50 min'})
-  if (hasSwim) days.push({name:'TUE',icon:'🏊',type:'SWIM',cls:'dt-a',mins:'45 min'},{name:'THU',icon:'🏊',type:'SWIM INT',cls:'dt-h',mins:'40 min'})
+  if (hasHyrox) days.push({name:'THU',icon:'🔥',type:'HYROX SIM',cls:'dt-h',mins:'40 min'},{name:'SAT',icon:'🔥',type:'STR FOUND',cls:'dt-h',mins:'50 min'})
+  if (hasSwim) days.push({name:'TUE',icon:'🏊',type:'TECHNIQUE',cls:'dt-a',mins:'45 min'},{name:'THU',icon:'🏊',type:'INTERVALS',cls:'dt-h',mins:'40 min'})
   if (hasCycle) days.push({name:'TUE',icon:'🚴',type:'ZONE 2',cls:'dt-c',mins:'60 min'},{name:'SAT',icon:'🚴',type:'INTERVALS',cls:'dt-h',mins:'40 min'})
-  if (hasFoot) days.push({name:'TUE',icon:'⚽',type:'FOOTBALL',cls:'dt-a',mins:'90 min'},{name:'THU',icon:'⚡',type:'AGILITY',cls:'dt-h',mins:'30 min'})
-  if (hasMuay) days.push({name:'TUE',icon:'🥊',type:'MUAY THAI',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🥊',type:'MUAY THAI',cls:'dt-a',mins:'60 min'})
+  if (hasFoot) days.push({name:'TUE',icon:'⚽',type:'TECHNIQUE',cls:'dt-a',mins:'90 min'},{name:'THU',icon:'⚡',type:'FITNESS',cls:'dt-h',mins:'45 min'})
+  if (hasMuay) days.push({name:'TUE',icon:'🥊',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🥊',type:'CONDITIONING',cls:'dt-h',mins:'60 min'})
+  if (hasYoga) days.push({name:'WED',icon:'🧘',type:'YOGA FLOW',cls:'dt-c',mins:'45 min'},{name:'SUN',icon:'🧘',type:'RESTORATIVE',cls:'dt-r',mins:'30 min'})
+  if (hasCF) days.push({name:'MON',icon:'🔥',type:'METCON',cls:'dt-h',mins:'40 min'},{name:'WED',icon:'🏋️',type:'STRENGTH',cls:'dt-w',mins:'50 min'},{name:'FRI',icon:'⏱️',type:'EMOM/AMRAP',cls:'dt-h',mins:'30 min'})
+  if (hasBox) days.push({name:'TUE',icon:'🥊',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🛡️',type:'SPARRING',cls:'dt-h',mins:'60 min'})
+  if (hasTennis) days.push({name:'TUE',icon:'🎾',type:'GROUNDSTROKE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🎾',type:'MATCH PLAY',cls:'dt-h',mins:'90 min'})
+  if (hasBball) days.push({name:'TUE',icon:'🏀',type:'SKILLS',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🏀',type:'GAME',cls:'dt-h',mins:'90 min'})
+  if (hasVball) days.push({name:'TUE',icon:'🏐',type:'TECHNIQUE',cls:'dt-a',mins:'60 min'},{name:'THU',icon:'🏐',type:'SCRIMMAGE',cls:'dt-h',mins:'90 min'})
+  if (hasRow) days.push({name:'TUE',icon:'🚣',type:'TECHNIQUE',cls:'dt-a',mins:'45 min'},{name:'SAT',icon:'🚣',type:'INTERVALS',cls:'dt-h',mins:'50 min'})
 
-  // Deduplicate: keep first occurrence per day name, then sort by order
   const order = ['MON','TUE','WED','THU','FRI','SAT','SUN']
   const byName = {}
   days.forEach(d => { if(!byName[d.name]) byName[d.name] = d })
   if (!byName['SUN']) byName['SUN'] = {name:'SUN',icon:'😴',type:'REST',cls:'dt-r',mins:'ยืด'}
   const weekDays = order.filter(n => byName[n]).map(n => byName[n])
-
   const weekHTML = weekDays.map(d=>`<div class="day-card"><div class="day-name">${d.name}</div><div class="day-icon">${d.icon}</div><div class="day-type ${d.cls}">${d.type}</div><div class="day-mins">${d.mins}</div></div>`).join('')
 
   let html = `<div class="card"><div class="card-title"><span class="dot" style="background:var(--accent)"></span>ตารางสัปดาห์</div><div class="week-grid">${weekHTML}</div></div>`
 
-  // ---- WEIGHT TRAINING PROGRAM ----
+  // ===== WEIGHT TRAINING =====
   if (hasWT || noSport) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent4)">
+    html += `<div class="card" style="border-left:3px solid var(--accent4)">
       <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏋️ WEIGHT TRAINING PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Push / Pull / Legs Split · ${goal==='muscle_gain'?'Volume เน้นเพิ่มกล้ามเนื้อ':goal==='fat_loss'?'Compound + Superset เพิ่ม Calorie Burn':'Maintenance Load'}</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Push / Pull / Legs Split · ${goal==='muscle_gain'?'Volume เน้นเพิ่มกล้ามเนื้อ':goal==='fat_loss'?'Compound + Superset เผาแคล':'Maintenance'}</div>
 
-      <div class="card-title" style="font-size:.8em;margin-top:4px"><span class="dot" style="background:var(--accent4)"></span>จันทร์ — PUSH DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(อก · ไหล่ · Tricep)</span></div>
-      ${buildExList(['benchpress','incline_db_press','overhead_press','lateral_raise','tricep_pushdown','chest_fly'])}
+      ${subHead('var(--accent4)','จันทร์ — PUSH DAY','อก · ไหล่ · Tricep')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Compound ก่อน → 🟡 Isolation ท้าย</div>
+      ${buildExList(['benchpress','incline_db_press','overhead_press'])}
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Isolation —</div>
+      ${buildExList(['lateral_raise','tricep_pushdown','chest_fly','dips'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent3)"></span>พุธ — PULL DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(หลัง · Bicep)</span></div>
-      ${buildExList(['pullup','barbell_row','lat_pulldown','seated_cable_row','face_pull','bicep_curl','hammer_curl'])}
+      ${subHead('var(--accent3)','พุธ — PULL DAY','หลัง · Bicep · Rear Shoulder')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Width ก่อน (Pull-up/Pulldown) → 🟢 Thickness ต่อ (Row)</div>
+      ${buildExList(['pullup','lat_pulldown'])}
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Thickness + Rear —</div>
+      ${buildExList(['barbell_row','seated_cable_row','face_pull','bicep_curl','hammer_curl'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--red)"></span>ศุกร์ — LEG DAY <span style="font-size:.7em;color:var(--muted);font-weight:400">(ขา · Glute · น่อง)</span></div>
-      ${buildExList(['squat','rdl','hipthrust','leg_press','walking_lunge','leg_curl','calf_raise'])}
+      ${subHead('var(--red)','ศุกร์ — LEG DAY','ขา · Glute · น่อง')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Bilateral Compound → 🔴 Hip Hinge → 🟡 Isolation</div>
+      ${buildExList(['squat','leg_press'])}
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Hip Hinge + Glute —</div>
+      ${buildExList(['rdl','hipthrust','walking_lunge'])}
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Isolation —</div>
+      ${buildExList(['leg_curl','calf_raise'])}
     </div>`
   }
 
-  // ---- HYROX PROGRAM ----
+  // ===== HYROX =====
   if (hasHyrox) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent2)">
+    html += `<div class="card" style="border-left:3px solid var(--accent2)">
       <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 HYROX PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Functional Fitness · Strength + Endurance + Race Simulation</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Functional Fitness · 8 Stations + 1km Runs</div>
 
-      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — HYROX SIMULATION <span style="font-size:.7em;color:var(--muted);font-weight:400">(Circuit เลียนแบบ Race)</span></div>
-      <div class="info-box ib-b" style="margin-bottom:12px"><strong>CIRCUIT FORMAT</strong>ทำต่อเนื่อง: Row 500m → KB Swing 20 → Wall Ball 20 → Burpee Broad Jump 10 → พัก 3 นาที × 3 รอบ</div>
+      ${subHead('var(--accent2)','พฤหัส — HYROX SIMULATION','Circuit เลียนแบบ Race')}
+      <div class="info-box ib-b" style="margin-bottom:10px"><strong>CIRCUIT FORMAT</strong>Row 500m → KB Swing 20 → Wall Ball 20 → Burpee BJ 10 → พัก 3 min × 3 รอบ</div>
       ${buildExList(['row_machine','kbswing','wallball','burpee'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent)"></span>เสาร์ — STRENGTH FOUNDATIONS <span style="font-size:.7em;color:var(--muted);font-weight:400">(แรงพื้นฐาน)</span></div>
-      ${buildExList(['deadlift','farmer_carry','box_jump','ski_erg','sled_push'])}
+      ${subHead('var(--accent)','เสาร์ — STRENGTH FOUNDATIONS','แรงพื้นฐาน')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔵 Deadlift + Carry — ฝึก Functional Strength</div>
+      ${buildExList(['deadlift','farmer_carry'])}
+      <div style="font-size:.62em;color:var(--muted);font-family:var(--font-m);padding:4px 2px">— Power + Conditioning —</div>
+      ${buildExList(['box_jump','ski_erg','sled_push','double_under'])}
     </div>`
   }
 
-  // ---- BADMINTON PROGRAM ----
+  // ===== BADMINTON =====
   if (hasBad) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent5)">
+    html += `<div class="card" style="border-left:3px solid var(--accent5)">
       <div class="card-title"><span class="dot" style="background:var(--accent5)"></span>🏸 BADMINTON PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Court Drills + Physical Conditioning · เล่น 2 วัน/สัปดาห์</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Court Movement + Stroke Skill + Off-Court Conditioning</div>
 
-      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent5)"></span>On-Court Drills <span style="font-size:.7em;color:var(--muted);font-weight:400">(ทำก่อน Match 15–20 นาที)</span></div>
-      ${buildExList(['shadowfootwork','split_step_drill','reaction_drill','jump_smash'])}
+      ${subHead('var(--accent5)','👣 Footwork & Movement','ทุกเซสชัน ทำก่อนตี 15 นาที')}
+      ${buildExList(['shadowfootwork','split_step_drill','lateral_bound'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent3)"></span>Off-Court Conditioning <span style="font-size:.7em;color:var(--muted);font-weight:400">(วันไม่เล่นแบด)</span></div>
-      ${buildExList(['lateral_bound','core_rotation','squat','calf_raise'])}
+      ${subHead('var(--accent4)','🏸 Stroke & Skill','On-Court Practice')}
+      ${buildExList(['reaction_drill','jump_smash'])}
+
+      ${subHead('var(--accent3)','💪 Off-Court Conditioning','วันไม่เล่นแบด')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Core + Legs + Wrist Endurance</div>
+      ${buildExList(['core_rotation','squat','walking_lunge','calf_raise'])}
+
+      ${subHead('var(--muted)','🔄 Recovery','หลัง Match')}
+      ${buildExList(['restorative'])}
     </div>`
   }
 
-  // ---- RUNNING PROGRAM ----
+  // ===== RUNNING =====
   if (hasRun) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent3)">
+    html += `<div class="card" style="border-left:3px solid var(--accent3)">
       <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🏃 RUNNING PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">3 Run/week: Zone 2 · Intervals · Long Run · ฝึก Aerobic Base</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">3 Run/week · ฝึก Aerobic Base + Speed + Endurance</div>
 
-      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent3)"></span>อังคาร — ZONE 2 BASE</div>
+      ${subHead('var(--accent3)','🏃 อังคาร — AEROBIC BASE','Zone 2 • ฝึก Fat Oxidation')}
       ${buildExList(['zone2run'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — SPEED WORK</div>
+      ${subHead('var(--accent2)','⚡ พฤหัส — SPEED WORK','Intervals + Strides')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">🔴 Intervals ก่อน → Strides ตามท้าย</div>
       ${buildExList(['interval_400','strides'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent4)"></span>เสาร์ — LONG RUN + TEMPO</div>
+      ${subHead('var(--accent4)','🌄 เสาร์ — LONG + TEMPO','Endurance + Threshold')}
       ${buildExList(['long_run','tempo_run'])}
     </div>`
   }
 
-  // ---- SWIMMING PROGRAM ----
+  // ===== SWIMMING =====
   if (hasSwim) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent4)">
+    html += `<div class="card" style="border-left:3px solid var(--accent4)">
       <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>🏊 SWIMMING PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Technique + Endurance · 2 ครั้ง/สัปดาห์</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Technique + Endurance · 2 ครั้ง/สัปดาห์</div>
 
-      <div class="card-title" style="font-size:.8em"><span class="dot" style="background:var(--accent4)"></span>อังคาร — TECHNIQUE DAY</div>
+      ${subHead('var(--accent4)','🎯 อังคาร — TECHNIQUE DAY','Drill Sets')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Catch-up → Kick → Pull — แยก Focus ทีละส่วน</div>
       ${buildExList(['freestyle_drill','kick_set','pull_set'])}
 
-      <div class="card-title" style="font-size:.8em;margin-top:16px"><span class="dot" style="background:var(--accent2)"></span>พฤหัส — INTERVAL DAY</div>
+      ${subHead('var(--accent2)','⚡ พฤหัส — INTERVAL DAY','Speed + VO2Max')}
       ${buildExList(['swim_interval'])}
     </div>`
   }
 
-  // ---- CYCLING PROGRAM ----
+  // ===== CYCLING =====
   if (hasCycle) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent3)">
+    html += `<div class="card" style="border-left:3px solid var(--accent3)">
       <div class="card-title"><span class="dot" style="background:var(--accent3)"></span>🚴 CYCLING PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Zone 2 Base + HIIT Intervals · Cadence 80–90 RPM</div>
-      ${buildExList(['zone2_cycle','cycling_interval'])}
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Zone 2 Base + HIIT + Hill Climb · Cadence 80–90 RPM</div>
+
+      ${subHead('var(--accent3)','🌿 อังคาร — AEROBIC BASE','Zone 2 Long Ride')}
+      ${buildExList(['zone2_cycle'])}
+
+      ${subHead('var(--accent2)','⚡ เสาร์ — HIGH INTENSITY','Intervals + Hill')}
+      ${buildExList(['cycling_interval','hill_climb_cycle'])}
     </div>`
   }
 
-  // ---- FOOTBALL PROGRAM ----
+  // ===== FOOTBALL =====
   if (hasFoot) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent2)">
+    html += `<div class="card" style="border-left:3px solid var(--accent2)">
       <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>⚽ FOOTBALL FITNESS</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Speed · Agility · Endurance · ฝึก 2 ครั้ง/สัปดาห์</div>
-      ${buildExList(['sprint_interval','agility_ladder','zone2run','squat','walking_lunge'])}
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Speed · Agility · Technique · Endurance</div>
+
+      ${subHead('var(--accent5)','🎯 เทคนิค (อังคาร)','Skill-based Practice')}
+      ${buildExList(['dribbling_drill','shooting_drill','header_drill'])}
+
+      ${subHead('var(--accent2)','⚡ ฟิตเนส (พฤหัส)','Speed + Agility + Endurance')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Sprint → Agility → Endurance Run</div>
+      ${buildExList(['sprint_interval','agility_ladder','zone2run'])}
+
+      ${subHead('var(--accent4)','💪 Strength Support','Gym Off-Season')}
+      ${buildExList(['squat','walking_lunge','calf_raise'])}
     </div>`
   }
 
-  // ---- MUAY THAI PROGRAM ----
+  // ===== MUAY THAI =====
   if (hasMuay) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--red)">
+    html += `<div class="card" style="border-left:3px solid var(--red)">
       <div class="card-title"><span class="dot" style="background:var(--red)"></span>🥊 MUAY THAI PROGRAM</div>
-      <div style="font-size:.7em;color:var(--muted);margin-bottom:14px;font-family:var(--font-m)">Technique + Conditioning · 2–3 ครั้ง/สัปดาห์</div>
-      ${buildExList(['jump_rope','shadow_boxing','heavy_bag','core_muay'])}
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Striking · Clinch · Conditioning · 2–3 ครั้ง/สัปดาห์</div>
+
+      ${subHead('var(--accent)','🥊 Warm-up & Conditioning','เริ่มทุก Session')}
+      ${buildExList(['jump_rope'])}
+
+      ${subHead('var(--red)','🎯 Striking Technique','Shadow + Bag + Pads')}
+      ${buildExList(['shadow_boxing','heavy_bag'])}
+
+      ${subHead('var(--accent2)','💪 Core & Power','ฝึกหลัง Technique')}
+      ${buildExList(['core_muay','burpee','mountainclimber'])}
     </div>`
   }
 
-  // ---- GENERAL HIIT (no sport selected + fat loss, or truly empty) ----
-  if ((noSport && goal==='fat_loss') || (!hasWT && !hasHyrox && !hasBad && !hasRun && !hasSwim && !hasCycle && !hasFoot && !hasMuay)) {
-    html += `
-    <div class="card" style="border-left:3px solid var(--accent2)">
-      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 HIIT CARDIO</div>
-      ${buildExList(['burpee','mountainclimber','box_jump'])}
+  // ===== YOGA / PILATES =====
+  if (hasYoga) {
+    html += `<div class="card" style="border-left:3px solid #34d399">
+      <div class="card-title"><span class="dot" style="background:#34d399"></span>🧘 YOGA / PILATES PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Flexibility · Core · Mobility · Recovery · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#34d399','🌅 Active Flow (พุธ)','Sun Salutation + Warrior')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Flow ต่อเนื่อง → Strength Poses → Inversion</div>
+      ${buildExList(['sun_salutation','warrior_flow','plank_yoga'])}
+
+      ${subHead('#34d399','🌿 Hip & Spine Mobility','ทำทุกวันได้')}
+      ${buildExList(['hip_opener','spine_mobility'])}
+
+      ${subHead('var(--muted)','😌 Restorative (อาทิตย์)','10–15 นาที หลัง Hard Day')}
+      ${buildExList(['restorative'])}
     </div>`
   }
 
-  // ---- RECOVERY NOTE ----
+  // ===== CROSSFIT / HIIT =====
+  if (hasCF) {
+    html += `<div class="card" style="border-left:3px solid var(--accent2)">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 CROSSFIT / HIIT PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">MetCon · Olympic Lifting · Gymnastics · 3 ครั้ง/สัปดาห์</div>
+
+      ${subHead('var(--accent4)','🏋️ จันทร์ — STRENGTH','Barbell + Olympic')}
+      <div style="font-size:.64em;color:var(--muted);font-family:var(--font-m);margin-bottom:6px;padding-left:2px">Strength ก่อน MetCon เสมอ</div>
+      ${buildExList(['deadlift','power_clean'])}
+
+      ${subHead('var(--accent2)','🔥 พุธ — METCON','AMRAP / For Time')}
+      ${buildExList(['amrap_circuit','emom','double_under'])}
+
+      ${subHead('var(--accent3)','💪 ศุกร์ — GYMNASTICS + KB','Bodyweight + Conditioning')}
+      ${buildExList(['muscle_up','kb_complex','burpee','box_jump'])}
+    </div>`
+  }
+
+  // ===== BOXING =====
+  if (hasBox) {
+    html += `<div class="card" style="border-left:3px solid #f43f5e">
+      <div class="card-title"><span class="dot" style="background:#f43f5e"></span>🥊 BOXING PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Offense · Defense · Footwork · Conditioning · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#f43f5e','🥊 Offense (อังคาร)','Punching Combinations')}
+      ${buildExList(['jab_cross_combo','uppercut_body','speed_bag'])}
+
+      ${subHead('#f43f5e','🛡️ Defense & Footwork (พฤหัส)','Slip · Roll · Move')}
+      ${buildExList(['boxing_defense','boxing_footwork'])}
+
+      ${subHead('var(--accent2)','💪 Conditioning','ทุก Session')}
+      ${buildExList(['jump_rope','core_muay'])}
+    </div>`
+  }
+
+  // ===== TENNIS =====
+  if (hasTennis) {
+    html += `<div class="card" style="border-left:3px solid #facc15">
+      <div class="card-title"><span class="dot" style="background:#facc15"></span>🎾 TENNIS PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Groundstrokes · Serve · Net · Footwork · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#facc15','🎾 Groundstroke Day (อังคาร)','Forehand + Backhand')}
+      ${buildExList(['forehand_topspin','backhand_drill','tennis_footwork'])}
+
+      ${subHead('#facc15','🎯 Serve & Net (พฤหัส)','Weapon + Net Game')}
+      ${buildExList(['tennis_serve','volley_drill'])}
+
+      ${subHead('var(--accent2)','💪 On-Court Fitness','Agility + Conditioning')}
+      ${buildExList(['agility_ladder','sprint_interval'])}
+    </div>`
+  }
+
+  // ===== BASKETBALL =====
+  if (hasBball) {
+    html += `<div class="card" style="border-left:3px solid #f97316">
+      <div class="card-title"><span class="dot" style="background:#f97316"></span>🏀 BASKETBALL PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Ball Handling · Shooting · Defense · Athleticism · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#f97316','🏀 Skills Day (อังคาร)','Handle + Shoot')}
+      ${buildExList(['dribble_combo','shooting_form'])}
+
+      ${subHead('#f97316','🛡️ Defense + Athleticism (พฤหัส)','Slide + Jump + Speed')}
+      ${buildExList(['defensive_slide','vert_jump','agility_ladder','sprint_interval'])}
+    </div>`
+  }
+
+  // ===== VOLLEYBALL =====
+  if (hasVball) {
+    html += `<div class="card" style="border-left:3px solid #818cf8">
+      <div class="card-title"><span class="dot" style="background:#818cf8"></span>🏐 VOLLEYBALL PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Passing · Serving · Attacking · Blocking · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#818cf8','🏐 Receiving (อังคาร)','Pass + Serve + Dig')}
+      ${buildExList(['dig_receive','volleyball_serve'])}
+
+      ${subHead('#818cf8','💥 Attack & Block (พฤหัส)','Spike + Block + Jump')}
+      ${buildExList(['spike_approach','block_timing','vert_jump'])}
+    </div>`
+  }
+
+  // ===== ROWING =====
+  if (hasRow) {
+    html += `<div class="card" style="border-left:3px solid #22d3ee">
+      <div class="card-title"><span class="dot" style="background:#22d3ee"></span>🚣 ROWING PROGRAM</div>
+      <div style="font-size:.68em;color:var(--muted);margin-bottom:10px;font-family:var(--font-m)">Technique · Endurance · Power · 2 ครั้ง/สัปดาห์</div>
+
+      ${subHead('#22d3ee','🎯 Technique Day (อังคาร)','Catch → Drive → Finish → Recovery')}
+      ${buildExList(['rowing_catch','power_10','steady_state_row'])}
+
+      ${subHead('#22d3ee','⚡ Interval Day (เสาร์)','Speed + VO2Max')}
+      ${buildExList(['rowing_intervals'])}
+    </div>`
+  }
+
+  // ===== HIIT Fallback =====
+  if (noSport || (!hasWT && !hasHyrox && !hasBad && !hasRun && !hasSwim && !hasCycle && !hasFoot && !hasMuay && !hasYoga && !hasCF && !hasBox && !hasTennis && !hasBball && !hasVball && !hasRow)) {
+    html += `<div class="card" style="border-left:3px solid var(--accent2)">
+      <div class="card-title"><span class="dot" style="background:var(--accent2)"></span>🔥 GENERAL HIIT</div>
+      ${buildExList(['burpee','mountainclimber','box_jump','amrap_circuit'])}
+    </div>`
+  }
+
+  // ===== RECOVERY =====
   html += `<div class="card">
     <div class="card-title"><span class="dot" style="background:var(--muted)"></span>😴 Recovery & Mobility</div>
     <div class="info-box ib-y"><strong>กฎเหล็ก</strong>
       นอนหลับ 7–8 ชั่วโมง · Progressive Overload: เพิ่ม Weight/Rep 2–5% ทุก 2 สัปดาห์<br>
-      ถ้าปวดเมื่อย overreaching ให้ Deload 1 สัปดาห์ (ลด Weight 40–50%)
+      Deload ทุก 4–6 สัปดาห์ (ลด Volume 40%) · อาการบาดเจ็บ → หยุด อย่าฝืน
     </div>
+    ${buildExList(['spine_mobility','hip_opener','restorative'])}
   </div>`
 
   return html
@@ -1019,6 +1246,201 @@ async function loadAIMealPlan(r) {
   }
 }
 
+// ======= FOOD DIARY =======
+function escHtml(s) {
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+}
+
+function buildDiaryHTML() {
+  const cr = calcData || {}
+  const foodLogs = todayLogs.filter(l => l.meal_type !== 'water')
+  const waterLogs = todayLogs.filter(l => l.meal_type === 'water')
+  const totalCal = foodLogs.reduce((s,l) => s + (l.calories_kcal||0), 0)
+  const totalP = foodLogs.reduce((s,l) => s + (l.protein_g||0), 0)
+  const totalC = foodLogs.reduce((s,l) => s + (l.carb_g||0), 0)
+  const totalF = foodLogs.reduce((s,l) => s + (l.fat_g||0), 0)
+  const totalW = waterLogs.reduce((s,l) => s + (l.water_ml||0), 0)
+  const tCal = cr.targetCal||2000, tP = cr.proteinG||150, tC = cr.carbG||200, tFat = cr.fatG||55
+  const tW = Math.round((cr.waterNeeded||2.5)*1000)
+  const pCal = Math.min(100,Math.round(totalCal/tCal*100))
+  const pP = Math.min(100,Math.round(totalP/tP*100))
+  const pC = Math.min(100,Math.round(totalC/tC*100))
+  const pF = Math.min(100,Math.round(totalF/tFat*100))
+  const pW = Math.min(100,Math.round(totalW/tW*100))
+
+  const mIcons = {breakfast:'☀️',lunch:'🌤️',dinner:'🌙',snack:'🍎'}
+  const mNames = {breakfast:'มื้อเช้า',lunch:'มื้อกลางวัน',dinner:'มื้อเย็น',snack:'ของว่าง'}
+  const mColors = {breakfast:'var(--accent2)',lunch:'var(--accent4)',dinner:'var(--accent5)',snack:'var(--accent3)'}
+
+  const grouped = {breakfast:[],lunch:[],dinner:[],snack:[]}
+  foodLogs.forEach(l => { if(grouped[l.meal_type]) grouped[l.meal_type].push(l) })
+
+  const logHTML = Object.keys(grouped).filter(t => grouped[t].length).map(t => {
+    const typeCal = grouped[t].reduce((s,l) => s + (l.calories_kcal||0), 0)
+    return `<div class="card" style="margin-bottom:10px;border-left:3px solid ${mColors[t]}">
+      <div class="card-title" style="margin-bottom:10px">
+        <span class="dot" style="background:${mColors[t]}"></span>${mIcons[t]} ${mNames[t]}
+        <span style="margin-left:auto;font-family:var(--font-m);font-size:.72em;color:var(--accent)">${Math.round(typeCal)} kcal</span>
+      </div>
+      ${grouped[t].map(l => `<div style="display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.04)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.8em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(l.food_name)}</div>
+          <div style="font-size:.64em;color:var(--muted);margin-top:2px;font-family:var(--font-m)">
+            ${l.calories_kcal?l.calories_kcal+' kcal':''}${l.protein_g?' · P '+l.protein_g+'g':''}${l.carb_g?' · C '+l.carb_g+'g':''}${l.fat_g?' · F '+l.fat_g+'g':''}
+          </div>
+        </div>
+        <button onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em">✕</button>
+      </div>`).join('')}
+    </div>`
+  }).join('')
+
+  const waterBadges = waterLogs.length
+    ? waterLogs.map(l => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:.66em;font-family:var(--font-m);color:var(--accent4);padding:3px 8px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.15);border-radius:8px;margin:2px">
+        💧${l.water_ml}ml
+        <button onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9em;padding:0;line-height:1;margin-left:2px">✕</button>
+      </span>`).join('')
+    : `<span style="font-size:.72em;color:var(--muted)">ยังไม่ได้บันทึก</span>`
+
+  const mtBtn = (t) => {
+    const active = diaryMealType === t
+    return `<button onclick="setDiaryMealType('${t}')" id="dmt-${t}" style="flex:1;min-width:62px;padding:7px 4px;border-radius:10px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(45,212,191,.1)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};font-family:var(--font-b);font-size:.7em;cursor:pointer;transition:all .2s;text-align:center">
+      ${mIcons[t]}<br><span style="font-size:.85em">${mNames[t]}</span>
+    </button>`
+  }
+
+  const inputStyle = 'width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.86em;outline:none;box-sizing:border-box'
+  const labelStyle = 'display:block;font-size:.62em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px'
+
+  return `
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>สรุปวันนี้</div>
+      <div class="prog-row"><div class="prog-header"><span class="prog-label">⚡ แคลอรี่</span><span class="prog-val">${Math.round(totalCal)} / ${tCal} kcal</span></div><div class="prog-track"><div class="prog-fill" style="width:${pCal}%;background:${pCal>=100?'var(--red)':'var(--accent4)'}"></div></div></div>
+      <div class="prog-row"><div class="prog-header"><span class="prog-label">🥩 โปรตีน</span><span class="prog-val">${Math.round(totalP)} / ${tP}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pP}%;background:var(--accent3)"></div></div></div>
+      <div class="prog-row"><div class="prog-header"><span class="prog-label">🌾 คาร์บ</span><span class="prog-val">${Math.round(totalC)} / ${tC}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pC}%;background:var(--accent4)"></div></div></div>
+      <div class="prog-row"><div class="prog-header"><span class="prog-label">🧈 ไขมัน</span><span class="prog-val">${Math.round(totalF)} / ${tFat}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pF}%;background:var(--accent2)"></div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--accent4)"></span>💧 น้ำ</div>
+      <div class="prog-row" style="margin-bottom:12px"><div class="prog-header"><span class="prog-label">${Math.round(totalW)}ml / ${tW}ml</span><span class="prog-val">${pW}%</span></div><div class="prog-track"><div class="prog-fill" style="width:${pW}%;background:var(--accent4)"></div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button onclick="addWater(150)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">☕ กาแฟ<br><span style="font-size:.8em;color:var(--muted)">+150ml</span></button>
+        <button onclick="addWater(250)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">💧 แก้ว<br><span style="font-size:.8em;color:var(--muted)">+250ml</span></button>
+        <button onclick="addWater(500)" style="flex:1;min-width:76px;padding:8px 6px;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:10px;color:var(--accent4);font-family:var(--font-b);font-size:.74em;cursor:pointer;text-align:center">🍶 ขวด<br><span style="font-size:.8em;color:var(--muted)">+500ml</span></button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${waterBadges}</div>
+    </div>
+
+    <div class="card" style="border:1px solid rgba(45,212,191,.15)">
+      <div class="card-title"><span class="dot" style="background:var(--accent)"></span>➕ บันทึกอาหาร</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${['breakfast','lunch','dinner','snack'].map(mtBtn).join('')}
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="${labelStyle}">ชื่ออาหาร *</label>
+        <input id="diary-food-name" type="text" maxlength="200" placeholder="เช่น ข้าวกล้อง + ไก่ย่าง" style="${inputStyle}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="${labelStyle}">แคลอรี่ (kcal)</label><input id="diary-cal" type="number" min="0" max="9999" step="1" placeholder="เช่น 450" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+      </div>
+      <button id="diary-submit-btn" onclick="submitFoodLog()" style="width:100%;padding:13px;border-radius:12px;border:none;background:var(--accent);color:#080b10;font-family:var(--font-b);font-size:.9em;font-weight:700;cursor:pointer;transition:background .2s">+ บันทึก</button>
+      <div id="diary-alert" style="display:none;margin-top:8px;font-size:.72em;padding:6px 10px;border-radius:8px"></div>
+    </div>
+
+    <div id="diary-log-items">
+      ${logHTML||`<div class="card" style="text-align:center;padding:28px;color:var(--muted);font-size:.8em">ยังไม่มีรายการวันนี้<br><span style="font-size:.85em">เริ่มบันทึกได้เลยด้านบน</span></div>`}
+    </div>`
+}
+
+function renderDiaryPanel() {
+  const panel = document.getElementById('tab-diary')
+  if (panel) panel.innerHTML = buildDiaryHTML()
+}
+
+function setDiaryMealType(type) {
+  diaryMealType = type
+  const mIcons = {breakfast:'☀️',lunch:'🌤️',dinner:'🌙',snack:'🍎'}
+  const mNames = {breakfast:'มื้อเช้า',lunch:'มื้อกลางวัน',dinner:'มื้อเย็น',snack:'ของว่าง'}
+  ;['breakfast','lunch','dinner','snack'].forEach(t => {
+    const btn = document.getElementById('dmt-' + t)
+    if (!btn) return
+    const active = t === type
+    btn.style.border = active ? '1px solid var(--accent)' : '1px solid rgba(255,255,255,.08)'
+    btn.style.background = active ? 'rgba(45,212,191,.1)' : 'transparent'
+    btn.style.color = active ? 'var(--accent)' : 'var(--muted)'
+  })
+}
+
+async function submitFoodLog() {
+  const nameEl = document.getElementById('diary-food-name')
+  const alertEl = document.getElementById('diary-alert')
+  const btn = document.getElementById('diary-submit-btn')
+  const name = nameEl?.value?.trim()
+  if (!name) {
+    alertEl.textContent = 'กรุณาใส่ชื่ออาหาร'
+    alertEl.style.cssText = 'display:block;margin-top:8px;font-size:.72em;padding:6px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red)'
+    return
+  }
+  alertEl.style.display = 'none'
+  if (btn) { btn.textContent = 'กำลังบันทึก...'; btn.disabled = true }
+  const cal = parseFloat(document.getElementById('diary-cal')?.value) || null
+  const p = parseFloat(document.getElementById('diary-protein')?.value) || null
+  const c = parseFloat(document.getElementById('diary-carb')?.value) || null
+  const f = parseFloat(document.getElementById('diary-fat')?.value) || null
+  await addFoodLog({ meal_type: diaryMealType, food_name: name, calories_kcal: cal, protein_g: p, carb_g: c, fat_g: f })
+}
+
+async function addFoodLog(data) {
+  if (!currentUser) return
+  const { error } = await sb.from('food_logs').insert({
+    user_id: currentUser.id,
+    meal_type: data.meal_type,
+    food_name: data.food_name,
+    calories_kcal: data.calories_kcal || null,
+    protein_g: data.protein_g || null,
+    carb_g: data.carb_g || null,
+    fat_g: data.fat_g || null,
+    water_ml: data.water_ml || null,
+  })
+  if (error) { console.error('addFoodLog:', error.message); return }
+  await loadTodayFoodLogs()
+}
+
+async function deleteFoodLog(id) {
+  if (!currentUser) return
+  const { error } = await sb.from('food_logs').delete().eq('id', id).eq('user_id', currentUser.id)
+  if (error) { console.error('deleteFoodLog:', error.message); return }
+  todayLogs = todayLogs.filter(l => l.id !== id)
+  renderDiaryPanel()
+}
+
+async function addWater(ml) {
+  const name = ml === 150 ? 'กาแฟ/ชา' : ml === 250 ? 'น้ำเปล่า 1 แก้ว' : 'น้ำ 1 ขวด'
+  await addFoodLog({ meal_type: 'water', food_name: name, water_ml: ml })
+}
+
+async function loadTodayFoodLogs() {
+  if (!currentUser) return
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString()
+  const { data, error } = await sb
+    .from('food_logs')
+    .select('id,meal_type,food_name,calories_kcal,protein_g,carb_g,fat_g,water_ml,logged_at')
+    .eq('user_id', currentUser.id)
+    .gte('logged_at', start)
+    .lte('logged_at', end)
+    .order('logged_at', { ascending: true })
+  if (error) { console.error('loadTodayFoodLogs:', error.message); return }
+  todayLogs = data || []
+  renderDiaryPanel()
+}
+
 // Force regenerate — clears cache for today then reloads
 function regenerateMealPlan() {
   const today = new Date().toISOString().slice(0,10)
@@ -1090,7 +1512,7 @@ function renderDashboard(profile, record, allRecords) {
   `
 
   // BUILD TABS (dynamic based on sports)
-  const tabs = [{id:'exercise',label:'🏋️ ออกกำลังกาย'},{id:'food',label:'🍽️ อาหาร'},{id:'history',label:'📊 ประวัติ'},{id:'tips',label:'💡 Tips'}]
+  const tabs = [{id:'exercise',label:'🏋️ ออกกำลังกาย'},{id:'food',label:'🍽️ อาหาร'},{id:'diary',label:'📝 บันทึก'},{id:'history',label:'📊 ประวัติ'},{id:'tips',label:'💡 Tips'}]
   document.getElementById('nav-inner').innerHTML = tabs.map((t,i)=>
     `<button class="nav-btn${i===0?' active':''}" onclick="switchTab('${t.id}',this)">${t.label}</button>`
   ).join('')
@@ -1099,6 +1521,7 @@ function renderDashboard(profile, record, allRecords) {
   document.getElementById('panels-container').innerHTML = `
     <div class="panel active" id="tab-exercise">${generateWorkoutPlan(sports, goal, cr)}</div>
     <div class="panel" id="tab-food">${generateFoodPlan(cr)}</div>
+    <div class="panel" id="tab-diary">${buildDiaryHTML()}</div>
     <div class="panel" id="tab-history">${buildHistoryHTML(allRecords)}</div>
     <div class="panel" id="tab-tips">
       <div class="card">
@@ -1122,8 +1545,9 @@ function renderDashboard(profile, record, allRecords) {
     <div class="footer">FITBODY · ${currentUser?.email||''}</div>
   `
 
-  // Async: load AI meal plan after DOM is ready
+  // Async: load AI meal plan + diary after DOM is ready
   loadAIMealPlan(cr)
+  loadTodayFoodLogs()
 }
 
 function switchTab(id, el) {
