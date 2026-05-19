@@ -208,6 +208,25 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
 .footer{text-align:center;padding:16px;font-family:var(--font-m);font-size:.58em;color:var(--muted)}
 
+/* DIARY RINGS */
+.diary-rings-wrap{display:flex;align-items:center;gap:16px;padding:4px 0 14px}
+.diary-cal-ring{flex-shrink:0;position:relative;width:120px;height:120px}
+.diary-cal-ring svg{transform:rotate(-90deg)}
+.diary-cal-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.diary-macro-rings{display:flex;flex-direction:column;gap:10px;flex:1;min-width:0}
+.diary-macro-ring-row{display:flex;align-items:center;gap:10px}
+.diary-mini-ring{position:relative;width:54px;height:54px;flex-shrink:0}
+.diary-mini-ring svg{transform:rotate(-90deg)}
+.diary-mini-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-m);font-size:.58em;font-weight:700;pointer-events:none}
+.diary-macro-info{flex:1;min-width:0}
+.diary-macro-label{font-size:.62em;color:var(--muted);font-family:var(--font-m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px}
+.diary-macro-val{font-size:.76em;font-weight:700;white-space:nowrap}
+
+/* AI FOOD BUTTONS */
+.ai-food-row{display:flex;gap:8px;margin-bottom:10px}
+.ai-food-btn{flex:1;padding:8px 10px;border-radius:10px;font-family:var(--font-b);font-size:.74em;cursor:pointer;transition:all .2s;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px}
+.ai-food-btn:disabled{opacity:.5;cursor:not-allowed}
+
 /* SPORTS EDITOR MODAL */
 #sports-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:1100;display:none;align-items:flex-end;justify-content:center}
 #sports-modal.open{display:flex;animation:fadeOverlay .2s ease}
@@ -1656,11 +1675,13 @@ function buildDiaryHTML() {
   const totalW = waterLogs.reduce((s,l) => s + (l.water_ml||0), 0)
   const tCal = cr.targetCal||2000, tP = cr.proteinG||150, tC = cr.carbG||200, tFat = cr.fatG||55
   const tW = Math.round((cr.waterNeeded||2.5)*1000)
-  const pCal = Math.min(100,Math.round(totalCal/tCal*100))
-  const pP = Math.min(100,Math.round(totalP/tP*100))
-  const pC = Math.min(100,Math.round(totalC/tC*100))
-  const pF = Math.min(100,Math.round(totalF/tFat*100))
-  const pW = Math.min(100,Math.round(totalW/tW*100))
+  const pct = (n, d) => d > 0 ? Math.min(100, Math.round(n / d * 100)) : 0
+  const pCal = pct(totalCal, tCal)
+  const pP = pct(totalP, tP)
+  const pC = pct(totalC, tC)
+  const pF = pct(totalF, tFat)
+  const pW = pct(totalW, tW)
+  const cCirc = 270.2, mCirc = 125.7
 
   const mIcons = {breakfast:'☀️',lunch:'🌤️',dinner:'🌙',snack:'🍎'}
   const mNames = {breakfast:'มื้อเช้า',lunch:'มื้อกลางวัน',dinner:'มื้อเย็น',snack:'ของว่าง'}
@@ -1680,7 +1701,7 @@ function buildDiaryHTML() {
         <div style="flex:1;min-width:0">
           <div style="font-size:.8em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(l.food_name)}</div>
           <div style="font-size:.64em;color:var(--muted);margin-top:2px;font-family:var(--font-m)">
-            ${l.calories_kcal?l.calories_kcal+' kcal':''}${l.protein_g?' · P '+l.protein_g+'g':''}${l.carb_g?' · C '+l.carb_g+'g':''}${l.fat_g?' · F '+l.fat_g+'g':''}
+            ${l.calories_kcal?l.calories_kcal+' kcal':''}${l.protein_g?' · P '+l.protein_g+'g':''}${l.carb_g?' · C '+l.carb_g+'g':''}${l.fat_g?' · F '+l.fat_g+'g':''}${l.logged_at?(' · '+new Date(l.logged_at).toLocaleTimeString('th',{hour:'2-digit',minute:'2-digit'})):''}
           </div>
         </div>
         <button onclick="deleteFoodLog('${escHtml(l.id)}')" style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.15);border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:var(--red);font-size:.8em">✕</button>
@@ -1705,13 +1726,77 @@ function buildDiaryHTML() {
   const inputStyle = 'width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-b);font-size:.86em;outline:none;box-sizing:border-box'
   const labelStyle = 'display:block;font-size:.62em;color:var(--muted);font-family:var(--font-m);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px'
 
+  const calColor = pCal >= 100 ? 'var(--red)' : 'var(--accent4)'
+
   return `
     <div class="card">
       <div class="card-title"><span class="dot" style="background:var(--accent)"></span>สรุปวันนี้</div>
-      <div class="prog-row"><div class="prog-header"><span class="prog-label">⚡ แคลอรี่</span><span class="prog-val">${Math.round(totalCal)} / ${tCal} kcal</span></div><div class="prog-track"><div class="prog-fill" style="width:${pCal}%;background:${pCal>=100?'var(--red)':'var(--accent4)'}"></div></div></div>
-      <div class="prog-row"><div class="prog-header"><span class="prog-label">🥩 โปรตีน</span><span class="prog-val">${Math.round(totalP)} / ${tP}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pP}%;background:var(--accent3)"></div></div></div>
-      <div class="prog-row"><div class="prog-header"><span class="prog-label">🌾 คาร์บ</span><span class="prog-val">${Math.round(totalC)} / ${tC}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pC}%;background:var(--accent4)"></div></div></div>
-      <div class="prog-row"><div class="prog-header"><span class="prog-label">🧈 ไขมัน</span><span class="prog-val">${Math.round(totalF)} / ${tFat}g</span></div><div class="prog-track"><div class="prog-fill" style="width:${pF}%;background:var(--accent2)"></div></div></div>
+      <div class="diary-rings-wrap">
+        <div class="diary-cal-ring">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="43" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="9"/>
+            <circle cx="60" cy="60" r="43" fill="none" stroke="${calColor}" stroke-width="9"
+              stroke-linecap="round" stroke-dasharray="${cCirc}"
+              data-ring-pct="${pCal}" data-ring-circ="${cCirc}"
+              style="stroke-dashoffset:${cCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)"/>
+          </svg>
+          <div class="diary-cal-center">
+            <div style="font-family:var(--font-d);font-size:1.45em;line-height:1;color:${calColor}">${Math.round(totalCal)}</div>
+            <div style="font-family:var(--font-m);font-size:.5em;color:var(--muted);margin-top:1px">/ ${tCal} kcal</div>
+            <div style="font-size:.52em;color:${calColor};margin-top:3px;font-weight:700">${pCal}%</div>
+          </div>
+        </div>
+        <div class="diary-macro-rings">
+          <div class="diary-macro-ring-row">
+            <div class="diary-mini-ring">
+              <svg width="54" height="54" viewBox="0 0 54 54">
+                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
+                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent3)" stroke-width="5"
+                  stroke-linecap="round" stroke-dasharray="${mCirc}"
+                  data-ring-pct="${pP}" data-ring-circ="${mCirc}"
+                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .1s"/>
+              </svg>
+              <div class="diary-mini-center" style="color:var(--accent3)">${pP}%</div>
+            </div>
+            <div class="diary-macro-info">
+              <div class="diary-macro-label">🥩 โปรตีน</div>
+              <div class="diary-macro-val" style="color:var(--accent3)">${Math.round(totalP)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tP}g</span></div>
+            </div>
+          </div>
+          <div class="diary-macro-ring-row">
+            <div class="diary-mini-ring">
+              <svg width="54" height="54" viewBox="0 0 54 54">
+                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
+                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent4)" stroke-width="5"
+                  stroke-linecap="round" stroke-dasharray="${mCirc}"
+                  data-ring-pct="${pC}" data-ring-circ="${mCirc}"
+                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .2s"/>
+              </svg>
+              <div class="diary-mini-center" style="color:var(--accent4)">${pC}%</div>
+            </div>
+            <div class="diary-macro-info">
+              <div class="diary-macro-label">🌾 คาร์บ</div>
+              <div class="diary-macro-val" style="color:var(--accent4)">${Math.round(totalC)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tC}g</span></div>
+            </div>
+          </div>
+          <div class="diary-macro-ring-row">
+            <div class="diary-mini-ring">
+              <svg width="54" height="54" viewBox="0 0 54 54">
+                <circle cx="27" cy="27" r="20" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>
+                <circle cx="27" cy="27" r="20" fill="none" stroke="var(--accent2)" stroke-width="5"
+                  stroke-linecap="round" stroke-dasharray="${mCirc}"
+                  data-ring-pct="${pF}" data-ring-circ="${mCirc}"
+                  style="stroke-dashoffset:${mCirc};transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1) .3s"/>
+              </svg>
+              <div class="diary-mini-center" style="color:var(--accent2)">${pF}%</div>
+            </div>
+            <div class="diary-macro-info">
+              <div class="diary-macro-label">🧈 ไขมัน</div>
+              <div class="diary-macro-val" style="color:var(--accent2)">${Math.round(totalF)}g <span style="font-size:.78em;color:var(--muted);font-weight:400">/ ${tFat}g</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -1732,13 +1817,22 @@ function buildDiaryHTML() {
       </div>
       <div style="margin-bottom:10px">
         <label style="${labelStyle}">ชื่ออาหาร *</label>
-        <input id="diary-food-name" type="text" maxlength="200" placeholder="เช่น ข้าวกล้อง + ไก่ย่าง" style="${inputStyle}">
+        <input id="diary-food-name" type="text" maxlength="200" placeholder="เช่น ข้าวกล้อง + ไก่ย่าง" style="${inputStyle}" oninput="clearAiStatus()">
       </div>
+      <div class="ai-food-row">
+        <button id="ai-est-btn" class="ai-food-btn" onclick="estimateFoodCalAI()" style="border:1px solid rgba(45,212,191,.3);background:rgba(45,212,191,.07);color:var(--accent)">🤖 AI ประมาณ cal</button>
+        <label class="ai-food-btn" style="border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07);color:var(--accent2);cursor:pointer">
+          📸 ถ่ายรูปอาหาร
+          <input type="file" accept="image/*" capture="environment" onchange="handleFoodPhoto(this)" style="display:none">
+        </label>
+      </div>
+      <div id="ai-estimate-status" style="display:none;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;font-family:var(--font-m)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div><label style="${labelStyle}">แคลอรี่ (kcal)</label><input id="diary-cal" type="number" min="0" max="9999" step="1" placeholder="เช่น 450" style="${inputStyle}"></div>
-        <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
+        <div><label style="${labelStyle}">เวลากิน</label><input id="diary-time" type="time" style="${inputStyle}" value="${new Date().toTimeString().slice(0,5)}"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+        <div><label style="${labelStyle}">โปรตีน (g)</label><input id="diary-protein" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">คาร์บ (g)</label><input id="diary-carb" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
         <div><label style="${labelStyle}">ไขมัน (g)</label><input id="diary-fat" type="number" min="0" max="999" step="0.1" placeholder="ไม่บังคับ" style="${inputStyle}"></div>
       </div>
@@ -1754,6 +1848,7 @@ function buildDiaryHTML() {
 function renderDiaryPanel() {
   const panel = document.getElementById('tab-diary')
   if (panel) panel.innerHTML = buildDiaryHTML()
+  requestAnimationFrame(() => requestAnimationFrame(animateDiaryRings))
 }
 
 function setDiaryMealType(type) {
@@ -1782,16 +1877,27 @@ async function submitFoodLog() {
   }
   alertEl.style.display = 'none'
   if (btn) { btn.textContent = 'กำลังบันทึก...'; btn.disabled = true }
-  const cal = parseFloat(document.getElementById('diary-cal')?.value) || null
-  const p = parseFloat(document.getElementById('diary-protein')?.value) || null
-  const c = parseFloat(document.getElementById('diary-carb')?.value) || null
-  const f = parseFloat(document.getElementById('diary-fat')?.value) || null
-  await addFoodLog({ meal_type: diaryMealType, food_name: name, calories_kcal: cal, protein_g: p, carb_g: c, fat_g: f })
+  try {
+    const cal = parseFloat(document.getElementById('diary-cal')?.value) || null
+    const p = parseFloat(document.getElementById('diary-protein')?.value) || null
+    const c = parseFloat(document.getElementById('diary-carb')?.value) || null
+    const f = parseFloat(document.getElementById('diary-fat')?.value) || null
+    const timeVal = document.getElementById('diary-time')?.value
+    let loggedAt = null
+    if (timeVal) {
+      const [h, m] = timeVal.split(':').map(Number)
+      const d = new Date(); d.setHours(h, m, 0, 0)
+      loggedAt = d.toISOString()
+    }
+    await addFoodLog({ meal_type: diaryMealType, food_name: name, calories_kcal: cal, protein_g: p, carb_g: c, fat_g: f, logged_at: loggedAt })
+  } finally {
+    if (btn) { btn.textContent = '+ บันทึก'; btn.disabled = false }
+  }
 }
 
 async function addFoodLog(data) {
   if (!currentUser) return
-  const { error } = await sb.from('food_logs').insert({
+  const row = {
     user_id: currentUser.id,
     meal_type: data.meal_type,
     food_name: data.food_name,
@@ -1800,7 +1906,9 @@ async function addFoodLog(data) {
     carb_g: data.carb_g || null,
     fat_g: data.fat_g || null,
     water_ml: data.water_ml || null,
-  })
+  }
+  if (data.logged_at) row.logged_at = data.logged_at
+  const { error } = await sb.from('food_logs').insert(row)
   if (error) { console.error('addFoodLog:', error.message); return }
   await loadTodayFoodLogs()
 }
@@ -1833,6 +1941,107 @@ async function loadTodayFoodLogs() {
   if (error) { console.error('loadTodayFoodLogs:', error.message); return }
   todayLogs = data || []
   renderDiaryPanel()
+}
+
+function animateDiaryRings() {
+  document.querySelectorAll('[data-ring-pct]').forEach(el => {
+    const pct = Math.min(parseFloat(el.dataset.ringPct) || 0, 100)
+    const circ = parseFloat(el.dataset.ringCirc) || 270
+    el.style.strokeDashoffset = circ * (1 - pct / 100)
+  })
+}
+
+function clearAiStatus() {
+  const s = document.getElementById('ai-estimate-status')
+  if (s) s.style.display = 'none'
+}
+
+async function estimateFoodCalAI() {
+  const nameEl = document.getElementById('diary-food-name')
+  const statusEl = document.getElementById('ai-estimate-status')
+  const btn = document.getElementById('ai-est-btn')
+  const name = nameEl?.value?.trim()
+  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);color:var(--accent);font-family:var(--font-m)'
+  const errStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
+  if (!name) {
+    statusEl.textContent = 'กรุณาใส่ชื่ออาหารก่อนค่ะ'
+    statusEl.style.cssText = errStyle
+    return
+  }
+  if (btn) { btn.textContent = '⏳ กำลังคำนวณ...'; btn.disabled = true }
+  statusEl.textContent = 'AI กำลังประมาณค่าสารอาหาร...'
+  statusEl.style.cssText = okStyle
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session?.access_token) throw new Error('no session')
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analyze-food`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ foodName: name })
+    })
+    const result = await res.json()
+    if (!res.ok || result.error) throw new Error(result.error || 'AI error')
+    if (result.calories_kcal != null) document.getElementById('diary-cal').value = result.calories_kcal
+    if (result.protein_g != null) document.getElementById('diary-protein').value = result.protein_g
+    if (result.carb_g != null) document.getElementById('diary-carb').value = result.carb_g
+    if (result.fat_g != null) document.getElementById('diary-fat').value = result.fat_g
+    const portion = result.portion_desc ? ` · ${result.portion_desc}` : ''
+    statusEl.textContent = `✓ AI ประมาณแล้ว${portion} — ตรวจสอบก่อนบันทึกนะคะ`
+    statusEl.style.cssText = okStyle
+  } catch {
+    statusEl.textContent = 'AI ประมาณไม่ได้ กรุณากรอกเองค่ะ'
+    statusEl.style.cssText = errStyle
+  } finally {
+    if (btn) { btn.textContent = '🤖 AI ประมาณ cal'; btn.disabled = false }
+  }
+}
+
+async function handleFoodPhoto(input) {
+  const file = input.files?.[0]
+  if (!file) return
+  const statusEl = document.getElementById('ai-estimate-status')
+  const okStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.15);color:var(--accent);font-family:var(--font-m)'
+  const errStyle = 'display:block;margin-bottom:10px;font-size:.72em;padding:7px 10px;border-radius:8px;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.2);color:var(--red);font-family:var(--font-m)'
+  if (file.size > 4 * 1024 * 1024) {
+    statusEl.textContent = 'รูปใหญ่เกินไป (สูงสุด 4MB) — ลองถ่ายใหม่หรือเลือกรูปที่เล็กกว่าค่ะ'
+    statusEl.style.cssText = errStyle
+    input.value = ''
+    return
+  }
+  input.disabled = true
+  statusEl.textContent = '📸 กำลังวิเคราะห์รูปอาหาร...'
+  statusEl.style.cssText = okStyle
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = e => resolve(e.target.result.split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session?.access_token) throw new Error('no session')
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/analyze-food`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ imageBase64: base64, mimeType: file.type || 'image/jpeg' })
+    })
+    const result = await res.json()
+    if (!res.ok || result.error) throw new Error(result.error || 'AI error')
+    if (result.food_name) document.getElementById('diary-food-name').value = result.food_name
+    if (result.calories_kcal != null) document.getElementById('diary-cal').value = result.calories_kcal
+    if (result.protein_g != null) document.getElementById('diary-protein').value = result.protein_g
+    if (result.carb_g != null) document.getElementById('diary-carb').value = result.carb_g
+    if (result.fat_g != null) document.getElementById('diary-fat').value = result.fat_g
+    const portion = result.portion_desc ? ` · ${result.portion_desc}` : ''
+    statusEl.textContent = `✓ AI อ่านรูปแล้ว${portion} — ตรวจสอบก่อนบันทึกนะคะ`
+    statusEl.style.cssText = okStyle
+  } catch {
+    statusEl.textContent = 'วิเคราะห์รูปไม่ได้ กรุณากรอกเองค่ะ'
+    statusEl.style.cssText = errStyle
+  } finally {
+    input.disabled = false
+    input.value = ''
+  }
 }
 
 // Force regenerate — clears cache for today then reloads
